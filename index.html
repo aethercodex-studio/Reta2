@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RETA2 - Party Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <!-- PANTALLA 1: INICIO -->
+    <div id="home-screen" class="screen active">
+        <div class="logo-placeholder cartoon-box"><i class="fa-solid fa-gamepad"></i></div>
+        <h1>RETA2 PARTY</h1>
+        <div class="player-input-container">
+            <input type="text" id="player-name" placeholder="Nombre del jugador" maxlength="12">
+            <button class="cartoon-btn" id="btn-add-player">Añadir</button>
+        </div>
+        <div class="player-list" id="player-list"></div>
+        <button class="cartoon-btn" style="background-color: #ff6b6b; color: white;" onclick="window.goToScreen('menu-screen')">¡JUGAR!</button>
+    </div>
+
+    <!-- PANTALLA 2: SELECCIÓN -->
+    <div id="menu-screen" class="screen">
+        <div class="top-bar">
+            <button class="cartoon-btn" onclick="window.goToScreen('home-screen')"><i class="fa-solid fa-house"></i></button>
+        </div>
+        <h2>ELIGE MINIJUEGO</h2>
+        <div class="game-menu">
+            <div class="game-card cartoon-box" style="background-color: #4ECDC4;" id="btn-play-oca">
+                <i class="fa-solid fa-dice"></i> LA OCA
+            </div>
+            <div class="game-card cartoon-box" style="background-color: #FF6B6B;">
+                <i class="fa-solid fa-dharmachakra"></i> LA RULETA
+            </div>
+            <div class="game-card cartoon-box" style="background-color: #FFE66D; color: black;">
+                <i class="fa-solid fa-box-open"></i> COFRES
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 3: LA OCA -->
+    <div id="oca-screen" class="screen">
+        <div class="top-bar">
+            <button class="cartoon-btn" onclick="window.goToScreen('menu-screen')"><i class="fa-solid fa-house"></i></button>
+        </div>
+        <div class="game-ui">
+            <h2 id="turn-indicator">Turno de: ...</h2>
+            <button class="cartoon-btn" id="show-dice-btn">Tirar Dado</button>
+        </div>
+        <div class="board-container" id="oca-board"></div>
+    </div>
+
+    <!-- DADO Y MODAL -->
+    <div id="dice-canvas-container">
+        <div id="dice-instructions">¡ESTIRA Y SUELTA!</div>
+    </div>
+
+    <div id="card-modal">
+        <div class="challenge-card cartoon-box" id="card-content">
+            <h2 id="card-title">TÍTULO</h2>
+            <i class="main-icon fa-solid fa-star" id="card-icon"></i>
+            <p id="card-desc">Descripción</p>
+            <button class="cartoon-btn close-card-btn" id="btn-close-modal">CERRAR</button>
+        </div>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+</html>
