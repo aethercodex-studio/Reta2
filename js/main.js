@@ -68,7 +68,16 @@ window.goToScreen = function(screenId) {
 
 // Inicialización de Eventos Generales
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btn-add-player').addEventListener('click', addPlayer);
+    const inputName = document.getElementById('player-name');
+    const btnAdd = document.getElementById('btn-add-player');
+    
+    btnAdd.addEventListener('click', addPlayer);
+    inputName.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            addPlayer();
+        }
+    });
+
     initSelectorEvent();
     if(GameState.players.length > 0) renderPlayers();
 });

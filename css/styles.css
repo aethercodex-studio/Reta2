@@ -41,14 +41,50 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
 
 /* OCA Y TABLERO */
 #oca-screen { position: relative; padding: 10px; }
+.oca-main-content { display: flex; width: 100%; flex: 1; gap: 20px; align-items: stretch; }
+.oca-board-area { flex: 1; display: flex; flex-direction: column; }
 .board-container { flex: 1; width: 100%; display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; background-color: #e0e0e0; padding: 15px; overflow-y: auto; border-radius: 16px; border: 4px solid black; }
 .tile { aspect-ratio: 1; background-color: white; border: 3px solid black; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 2rem; position: relative; box-shadow: 3px 3px 0 black; overflow: hidden; }
 .tile-num { position: absolute; top: 2px; left: 4px; font-size: 0.8rem; font-weight: bold; background: rgba(255,255,255,0.7); padding: 0 4px; border-radius: 4px; color: black; }
 
 .player-token { width: 24px; height: 24px; border-radius: 50%; border: 3px solid black; position: absolute; transition: all 0.3s ease; z-index: 10; box-shadow: 2px 2px 0px rgba(0,0,0,0.5); }
-.game-ui { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
 
-/* DADO GIGANTE CENTRADO */
+@keyframes tokenPop {
+    0% { transform: scale(1) translateY(0); }
+    50% { transform: scale(1.6) translateY(-20px); z-index: 100; }
+    100% { transform: scale(1) translateY(0); }
+}
+.token-pop { animation: tokenPop 0.4s ease-in-out; }
+
+@keyframes tokenPopBig {
+    0% { transform: scale(1) translateY(0); }
+    50% { transform: scale(2.2) translateY(-30px) rotate(15deg); z-index: 100; }
+    100% { transform: scale(1) translateY(0); }
+}
+.token-pop-big { animation: tokenPopBig 0.5s ease-in-out; }
+
+@keyframes nextTurnPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+.next-turn-anim { animation: nextTurnPop 0.4s ease-out; display: inline-block; }
+
+.game-ui { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
+@keyframes pulseBtn {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+#show-dice-btn { font-size: 1.44rem; padding: 12px 24px; animation: pulseBtn 1.5s infinite ease-in-out; }
+
+/* PLAYER INDEX */
+#player-index { width: 180px; background-color: rgba(255,255,255,0.9); padding: 15px; font-size: 1rem; align-self: flex-start; }
+#player-index h3 { margin: 0 0 10px 0; font-size: 1.2rem; text-align: center; border-bottom: 2px solid black; padding-bottom: 5px; }
+.index-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.index-color { width: 16px; height: 16px; border-radius: 50%; border: 2px solid black; }
+
+/* DADO GIGANTE CENTRADO Y 3D */
 #dice-canvas-container {
     position: fixed;
     top: 50%;
@@ -61,18 +97,112 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
     background-color: rgba(255, 255, 255, 0.95);
     box-shadow: 10px 10px 0px black;
     z-index: 50;
-    overflow: hidden;
     display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
 }
-#dice-instructions { position: absolute; top: 20px; width: 100%; text-align: center; font-size: 1.5rem; pointer-events: none; z-index: 51; color: black; }
+#dice-instructions { position: absolute; top: 30px; width: 80%; text-align: center; font-size: 0.9rem; pointer-events: none; z-index: 51; color: black; line-height: 1.2; word-wrap: break-word; }
+
+#strength-bar-container {
+    position: absolute;
+    bottom: 40px;
+    width: 70%;
+    height: 24px;
+    border: 3px solid black;
+    border-radius: 12px;
+    background-color: #ddd;
+    overflow: hidden;
+}
+
+#strength-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #ff4500;
+}
+
+.scene {
+    width: 120px;
+    height: 120px;
+    perspective: 800px;
+    margin-top: -20px;
+}
+
+.cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: translateZ(-60px) rotateX(-15deg) rotateY(-15deg);
+    transition: transform 1s ease-out;
+}
+
+.cube__face {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border: 4px solid black;
+    background: #FFD700;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 4rem;
+    font-weight: bold;
+    color: black;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+}
+
+.cube__face--front  { transform: rotateY(  0deg) translateZ(60px); }
+.cube__face--right  { transform: rotateY( 90deg) translateZ(60px); }
+.cube__face--back   { transform: rotateY(180deg) translateZ(60px); }
+.cube__face--left   { transform: rotateY(-90deg) translateZ(60px); }
+.cube__face--top    { transform: rotateX( 90deg) translateZ(60px); }
+.cube__face--bottom { transform: rotateX(-90deg) translateZ(60px); }
 
 /* MODAL Y CARTAS */
 #card-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; }
-.challenge-card { width: 320px; height: 480px; padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+.challenge-card { width: 320px; height: 480px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; position: relative; }
 .challenge-card.sencillos { background-color: var(--sencillos); color: black; }
 .challenge-card.hot { background-color: var(--hot); color: black; }
 .challenge-card.extremo { background-color: var(--extremo); color: var(--extremo-text); }
 .challenge-card h2 { font-size: 1.8rem; margin: 10px 0; }
 .challenge-card i.main-icon { font-size: 6rem; margin: auto 0; }
 .challenge-card p { font-size: 1.2rem; }
-.close-card-btn { position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%); }
+.close-card-btn { margin-top: auto; }
+
+/* RULETA */
+.ruleta-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex: 1; }
+.wheel-wrapper { 
+    position: relative; width: 90vw; max-width: 700px; height: 90vw; max-height: 700px; 
+    margin-top: 40px; border-radius: 50%; border: 6px solid black; box-shadow: 10px 10px 0px rgba(0,0,0,1); 
+}
+.wheel { 
+    width: 100%; height: 100%; border-radius: 50%; cursor: grab;
+    transition: transform 0s linear; overflow: hidden;
+}
+.wheel:active { cursor: grabbing; }
+.wheel-pointer { 
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    font-size: 5rem; color: #fff; z-index: 10; text-shadow: 3px 3px 0px #000, -3px -3px 0px #000, 3px -3px 0px #000, -3px 3px 0px #000;
+}
+
+/* LA MAQUINITA */
+#maquinita-screen { flex-direction: column; align-items: center; padding: 20px; }
+.slot-machine-container {
+    width: 90%; max-width: 600px; padding: 30px; background-color: #FF6B6B;
+    display: flex; flex-direction: column; align-items: center; margin-top: 20px;
+}
+.slot-window {
+    display: flex; gap: 10px; width: 100%; height: 120px; background: white; border: 6px solid black; border-radius: 12px; overflow: hidden;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.5); padding: 10px;
+}
+.slot-reel {
+    flex: 1; border: 3px solid black; border-radius: 8px; background: #f0f0f0; display: flex; flex-direction: column;
+}
+.slot-item {
+    width: 100%; height: 100px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    font-size: 1.1rem; font-weight: bold; text-align: center; color: black; border-bottom: 2px solid #ccc; box-sizing: border-box; padding: 5px;
+}
+.slot-item i { font-size: 2rem; margin-bottom: 5px; }
