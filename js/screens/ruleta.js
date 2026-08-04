@@ -1,9 +1,11 @@
 import { GameState, getRandomOtherPlayer } from '../main.js';
-import { allChallenges } from '../data/retos.js';
+import { pickChallenge, CATEGORY_COLORS, iconColorFor } from '../data/mezcla.js';
 import { celebrateGoldenCard, clearLayer } from '../utils/effects.js';
+import { renderIndexRows } from '../utils/playerIndex.js';
 
 const SEG_COUNT = 40;
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const DRINKS_PER_EXTRA_SPIN = 5;
 
 let wheelItems = [];
 let currentRotation = 0;
@@ -11,27 +13,64 @@ let isSpinning = false;
 let startAngle = 0;
 let lastMouseAngles = [];
 
+let drinkCounts = {};
+let extraSpinPending = false;
+
 export function startRuleta() {
     window.goToScreen('ruleta-screen');
     GameState.currentPlayerIndex = 0;
-    
+
+    drinkCounts = {};
+    GameState.players.forEach(p => { drinkCounts[p.name] = 0; });
+    extraSpinPending = false;
+
     generateWheel();
     updateTurnUIRuleta();
+    renderRuletaIndex();
     bindWheelEvents();
 }
 
 function updateTurnUIRuleta() {
     const cp = GameState.players[GameState.currentPlayerIndex];
-    document.getElementById('ruleta-turn-indicator').innerHTML = `Turno de: <span style="color:${cp.color}; font-size: 1.5em; -webkit-text-stroke: 1.5px black; text-shadow: 2px 2px 0 #000">${cp.name}</span>`;
+    const extra = extraSpinPending
+        ? ' <span class="extra-spin-tag"><i class="fa-solid fa-rotate-right"></i> GIRO EXTRA</span>'
+        : '';
+    document.getElementById('ruleta-turn-indicator').innerHTML =
+        `Turno de: <span style="color:${cp.color}; font-size: 1.5em; -webkit-text-stroke: 1.5px black; text-shadow: 2px 2px 0 #000">${cp.name}</span>${extra}`;
+}
+
+/** Índice con el contador de tragos de cada jugador. */
+function renderRuletaIndex() {
+    const list = document.getElementById('ruleta-index-list');
+    if (!list) return;
+
+    const cp = GameState.players[GameState.currentPlayerIndex];
+    renderIndexRows(list, GameState.players.map(p => {
+        const count = drinkCounts[p.name] || 0;
+        // Marcamos en oro a quien está a un trago del giro extra
+        const nextIsPrize = count > 0 && (count + 1) % DRINKS_PER_EXTRA_SPIN === 0;
+        return {
+            name: p.name,
+            color: p.color,
+            badge: count,
+            active: cp && p.name === cp.name,
+            highlight: nextIsPrize
+        };
+    }));
+}
+
+function nextTurnRuleta() {
+    extraSpinPending = false;
+    GameState.currentPlayerIndex = (GameState.currentPlayerIndex + 1) % GameState.players.length;
+    updateTurnUIRuleta();
+    renderRuletaIndex();
 }
 
 function generateWheel() {
     wheelItems = [];
-    let drinkChallenges = [...allChallenges['hot'], ...allChallenges['extremo']].filter(c => c.icon === 'fa-beer-mug-empty' || c.description.toLowerCase().includes('bebe'));
-    let allOthers = [...allChallenges['sencillos'], ...allChallenges['hot'], ...allChallenges['extremo']].filter(c => !drinkChallenges.includes(c));
-    
+
     let segments = [];
-    
+
     segments.push({
         text: 'RETO DE ORO',
         icon: 'fa-crown',
@@ -40,28 +79,19 @@ function generateWheel() {
         bgColor: 'url(#goldGrad)',
         iconColor: '#fff8d0'
     });
-    
-    for (let i = 0; i < 10; i++) {
-        let dc = drinkChallenges[Math.floor(Math.random() * drinkChallenges.length)] || allChallenges['hot'][0];
+
+    // Los 39 segmentos restantes (beber y retos) respetan la mezcla de porcentajes
+    for (let i = 0; i < SEG_COUNT - 1; i++) {
+        const pick = pickChallenge();
+        const rc = pick.challenge;
+        const cat = pick.category;
+
         segments.push({
-            text: '¡A BEBER!', icon: 'fa-beer-mug-empty', desc: dc.description, cat: 'hot', bgColor: '#FF4500', iconColor: 'black'
+            text: rc.text, icon: rc.icon, desc: rc.description, cat: cat,
+            bgColor: CATEGORY_COLORS[cat], iconColor: iconColorFor(cat)
         });
     }
-    
-    for (let i = 0; i < 29; i++) {
-        let rc = allOthers[Math.floor(Math.random() * allOthers.length)] || allChallenges['sencillos'][0];
-        let cat = 'sencillos';
-        if (allChallenges['hot'].includes(rc)) cat = 'hot';
-        if (allChallenges['extremo'].includes(rc)) cat = 'extremo';
-        
-        let bgColor = cat === 'sencillos' ? '#87CEFA' : (cat === 'hot' ? '#FF4500' : '#222222');
-        let iconColor = cat === 'extremo' ? 'white' : 'black';
-        
-        segments.push({
-            text: rc.text, icon: rc.icon, desc: rc.description, cat: cat, bgColor: bgColor, iconColor: iconColor
-        });
-    }
-    
+
     segments.sort(() => Math.random() - 0.5);
     wheelItems = segments;
 
@@ -266,17 +296,44 @@ function resolveWheel() {
     
     const cp = GameState.players[GameState.currentPlayerIndex];
     let finalDesc = item.desc.replace('{playerName}', getRandomOtherPlayer(cp.name));
-    
+
     if (item.cat === 'golden') {
         finalDesc = item.desc;
     }
-    
+
+    // Las cartas de beber suben el contador del jugador de turno
+    let earnedExtraSpin = false;
+    if (item.cat === 'beber') {
+        drinkCounts[cp.name] = (drinkCounts[cp.name] || 0) + 1;
+        earnedExtraSpin = drinkCounts[cp.name] % DRINKS_PER_EXTRA_SPIN === 0;
+        renderRuletaIndex();
+    }
+
+    showCard(
+        { text: item.text, icon: item.icon, desc: finalDesc, cat: item.cat },
+        () => {
+            if (earnedExtraSpin) showExtraSpinCard(cp, drinkCounts[cp.name]);
+            else nextTurnRuleta();
+        }
+    );
+}
+
+/** Premio cada 5 tragos: el mismo jugador vuelve a girar. */
+function showExtraSpinCard(player, count) {
     showCard({
-        text: item.text, icon: item.icon, desc: finalDesc, cat: item.cat
+        text: '¡GIRO EXTRA!',
+        icon: 'fa-rotate-right',
+        desc: `¡YA LLEVAS ${count} TRAGOS, TIENES UN GIRO EXTRA! Vuelve a girar la ruleta, ${player.name}.`,
+        cat: 'golden'
+    }, () => {
+        // No se avanza de turno: repite el mismo jugador
+        extraSpinPending = true;
+        updateTurnUIRuleta();
+        renderRuletaIndex();
     });
 }
 
-function showCard(data) {
+function showCard(data, onClose) {
     const content = document.getElementById('card-content');
     content.className = `challenge-card cartoon-box ${data.cat}`;
     content.style.backgroundColor = '';
@@ -291,9 +348,8 @@ function showCard(data) {
     btnClose.onclick = () => {
         document.getElementById('card-modal').style.display = 'none';
         clearLayer(document.getElementById('modal-particles'));
-        GameState.currentPlayerIndex = (GameState.currentPlayerIndex + 1) % GameState.players.length;
-        updateTurnUIRuleta();
         btnClose.onclick = oldOnClick;
+        if (onClose) onClose();
     };
 
     document.getElementById('card-modal').style.display = 'flex';

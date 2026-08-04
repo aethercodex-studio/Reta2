@@ -99,3 +99,24 @@ export function celebrateGoldenCard() {
     clearLayer(layer);
     goldenExplosion(layer, { waves: 3, scale: 1.5 });
 }
+
+/** Llegada a meta de un jugador que no es el ganador: confeti de fiesta. */
+export function celebratePodium() {
+    const layer = document.getElementById('modal-particles');
+    if (!layer) return;
+    clearLayer(layer);
+    const cx = (layer.clientWidth || window.innerWidth) / 2;
+    const cy = (layer.clientHeight || window.innerHeight) / 2;
+    burstParticles(layer, { x: cx, y: cy, count: 45, spread: 320, duration: 1000, scale: 1.1 });
+    confettiRain(layer, { count: 70, duration: 3000 });
+}
+
+/** Victoria final: oro a lo grande + lluvia de confeti de fiesta. */
+export function celebrateVictory() {
+    const layer = document.getElementById('modal-particles');
+    if (!layer) return;
+    clearLayer(layer);
+    goldenExplosion(layer, { waves: 4, scale: 1.8 });
+    confettiRain(layer, { count: 130, duration: 4200 });
+    setTimeout(() => confettiRain(layer, { count: 90, duration: 3800 }), 900);
+}

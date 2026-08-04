@@ -42,6 +42,48 @@
                 LA MAQUINITA
             </div>
         </div>
+
+        <!-- MEZCLA DE RETOS -->
+        <div class="mix-panel cartoon-box">
+            <h3><i class="fa-solid fa-sliders"></i> MEZCLA DE RETOS</h3>
+
+            <div class="mix-presets">
+                <button class="cartoon-btn preset-btn preset-calentando" data-preset="calentando">Para ir calentando</button>
+                <button class="cartoon-btn preset-btn preset-defecto" data-preset="defecto">Por defecto</button>
+                <button class="cartoon-btn preset-btn preset-atrevido" data-preset="atrevido">Atrevido</button>
+                <button class="cartoon-btn preset-btn preset-valientes" data-preset="valientes">Los más valientes</button>
+            </div>
+
+            <div class="mix-sliders">
+                <div class="mix-row" data-cat="beber">
+                    <span class="mix-label"><i class="fa-solid fa-beer-mug-empty"></i> BEBER</span>
+                    <input type="range" min="0" max="100" step="1" class="mix-slider" id="mix-beber" data-cat="beber">
+                    <span class="mix-value" id="mix-val-beber">40%</span>
+                </div>
+                <div class="mix-row" data-cat="sencillos">
+                    <span class="mix-label"><i class="fa-solid fa-face-smile"></i> SENCILLO</span>
+                    <input type="range" min="0" max="100" step="1" class="mix-slider" id="mix-sencillos" data-cat="sencillos">
+                    <span class="mix-value" id="mix-val-sencillos">30%</span>
+                </div>
+                <div class="mix-row" data-cat="hot">
+                    <span class="mix-label"><i class="fa-solid fa-fire"></i> HOT</span>
+                    <input type="range" min="0" max="100" step="1" class="mix-slider" id="mix-hot" data-cat="hot">
+                    <span class="mix-value" id="mix-val-hot">20%</span>
+                </div>
+                <div class="mix-row" data-cat="extremo">
+                    <span class="mix-label"><i class="fa-solid fa-skull"></i> EXTREMO</span>
+                    <input type="range" min="0" max="100" step="1" class="mix-slider" id="mix-extremo" data-cat="extremo">
+                    <span class="mix-value" id="mix-val-extremo">10%</span>
+                </div>
+            </div>
+
+            <div class="mix-bar" id="mix-bar">
+                <div class="mix-bar-seg seg-beber"></div>
+                <div class="mix-bar-seg seg-sencillos"></div>
+                <div class="mix-bar-seg seg-hot"></div>
+                <div class="mix-bar-seg seg-extremo"></div>
+            </div>
+        </div>
     </div>
 
     <!-- PANTALLA 3: LA OCA -->
@@ -52,8 +94,8 @@
 
         <div class="oca-main-content">
             <!-- PLAYER INDEX -->
-            <div id="player-index" class="cartoon-box">
-                <h3>Jugadores</h3>
+            <div id="player-index" class="side-index cartoon-box">
+                <h3><i class="fa-solid fa-ranking-star"></i> Clasificación</h3>
                 <div id="player-index-list"></div>
             </div>
 
@@ -73,9 +115,16 @@
             <button class="cartoon-btn" onclick="window.goToScreen('menu-screen')"><i class="fa-solid fa-house"></i></button>
         </div>
         
-        <div class="ruleta-container">
+        <div class="mode-layout">
+            <div id="ruleta-index" class="side-index cartoon-box">
+                <h3><i class="fa-solid fa-beer-mug-empty"></i> Tragos</h3>
+                <div id="ruleta-index-list"></div>
+                <p class="index-note">Cada 5 tragos, ¡giro extra!</p>
+            </div>
+
+            <div class="ruleta-container">
             <h2 id="ruleta-turn-indicator">Turno de: ...</h2>
-            
+
             <div class="wheel-wrapper">
                 <div class="wheel-pointer">
                     <i class="fa-solid fa-location-dot"></i>
@@ -83,23 +132,22 @@
                 <div id="ruleta-wheel" class="wheel"></div>
             </div>
             <p class="ruleta-hint">Arrastra para girar</p>
+            </div>
         </div>
     </div>
 
-    <!-- DADO Y MODAL -->
+    <!-- DADO -->
     <div id="dice-canvas-container">
-        <div id="dice-instructions">Mantén pulsado para dar fuerza</div>
-        <div id="strength-bar-container">
-            <div id="strength-bar"></div>
-        </div>
-        <div class="scene">
-            <div class="cube" id="dice-cube">
-                <div class="cube__face cube__face--front">1</div>
-                <div class="cube__face cube__face--back"><u>6</u></div>
-                <div class="cube__face cube__face--right">3</div>
-                <div class="cube__face cube__face--left">4</div>
-                <div class="cube__face cube__face--top">2</div>
-                <div class="cube__face cube__face--bottom">5</div>
+        <div id="dice-instructions">Toca el dado para tirar</div>
+        <div class="dice-stage" id="dice-stage">
+            <div class="dice-drift" id="dice-drift">
+                <div class="dice-impact" id="dice-impact"></div>
+                <div class="dice-shadow" id="dice-shadow"></div>
+                <div class="dice-hop" id="dice-hop">
+                    <div class="dice-fall" id="dice-fall">
+                        <div class="dice" id="dice-cube"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -109,6 +157,13 @@
         <div class="top-bar">
             <button class="cartoon-btn" onclick="window.goToScreen('menu-screen')"><i class="fa-solid fa-house"></i></button>
         </div>
+
+        <div class="mode-layout">
+            <div id="maquinita-index" class="side-index cartoon-box">
+                <h3><i class="fa-solid fa-list-ol"></i> Apariciones</h3>
+                <div id="maquinita-index-list"></div>
+                <p class="index-note">Cada 10 apariciones, ¡RETO DE ORO garantizado!</p>
+            </div>
 
         <div class="slot-stage" id="slot-stage">
             <div class="slot-machine cartoon-box" id="slot-machine">
@@ -153,6 +208,7 @@
 
             <div id="slot-win-banner"><span></span></div>
             <div id="slot-particles" class="particle-layer"></div>
+        </div>
         </div>
     </div>
 

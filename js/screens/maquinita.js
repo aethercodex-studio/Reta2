@@ -1,18 +1,42 @@
 import { GameState } from '../main.js';
-import { allChallenges } from '../data/retos.js';
+import { pickChallenge, categoryOf } from '../data/mezcla.js';
 import { burstParticles, confettiRain, goldenExplosion, clearLayer, celebrateGoldenCard, GOLD_PALETTE } from '../utils/effects.js';
+import { renderIndexRows } from '../utils/playerIndex.js';
 
 const ITEM_H = 160;            // debe coincidir con .slot-item / .reel-viewport en el CSS
 const STRIP_LEN = 26;          // items por rodillo; el último es el resultado
-const GOLDEN_CHANCE = 0.12;    // probabilidad de que salgan ? ? ?
+const GOLDEN_CHANCE = 0.05;    // probabilidad de que salgan ? ? ?
+const APPEARANCES_FOR_GOLDEN = 10;
 const REEL_IDS = ['reel-1', 'reel-2', 'reel-3'];
 const STOP_TIMES = [2800, 3700, 4700];
 
+let appearCounts = {};
+let goldenQueue = [];          // jugadores con RETO DE ORO garantizado pendiente
+
 export function startMaquinita() {
     window.goToScreen('maquinita-screen');
+    appearCounts = {};
+    GameState.players.forEach(p => { appearCounts[p.name] = 0; });
+    goldenQueue = [];
+
     buildBulbs();
     resetSlotVisuals();
+    renderMaquinitaIndex();
     bindMaquinitaEvents();
+}
+
+/** Índice con las apariciones de cada jugador en la máquina. */
+function renderMaquinitaIndex() {
+    const list = document.getElementById('maquinita-index-list');
+    if (!list) return;
+
+    renderIndexRows(list, GameState.players.map(p => ({
+        name: p.name,
+        color: p.color,
+        badge: appearCounts[p.name] || 0,
+        // En oro quien tiene el RETO DE ORO garantizado esperando
+        highlight: goldenQueue.includes(p.name)
+    })));
 }
 
 function bindMaquinitaEvents() {
@@ -49,10 +73,6 @@ function resetSlotVisuals() {
     clearLayer(document.getElementById('slot-particles'));
 }
 
-function allChallengesFlat() {
-    return [...allChallenges['sencillos'], ...allChallenges['hot'], ...allChallenges['extremo']];
-}
-
 function goldItem() {
     return { golden: true };
 }
@@ -66,13 +86,20 @@ function spinSlots() {
     lever.classList.add('pulled');
     setTimeout(() => lever.classList.remove('pulled'), 450);
 
-    const isGolden = Math.random() < GOLDEN_CHANCE;
+    // Dos vías para el RETO DE ORO:
+    //  1) garantizado, cuando un jugador alcanza un múltiplo de 10 apariciones
+    //  2) aleatorio, con GOLDEN_CHANCE en cualquier tirada y para cualquier jugador
+    const forcedName = goldenQueue.length ? goldenQueue.shift() : null;
+    const forcedPlayer = forcedName ? GameState.players.find(p => p.name === forcedName) : null;
+    // El contador NO se reinicia: sigue sumando y vuelve a premiar en el siguiente múltiplo de 10
+    const forcedMilestone = forcedPlayer ? (appearCounts[forcedPlayer.name] || 0) : 0;
+    const isGolden = forcedPlayer ? true : Math.random() < GOLDEN_CHANCE;
 
     // Resultado del tiro
     let p1 = GameState.players[Math.floor(Math.random() * GameState.players.length)];
     let otherPlayers = GameState.players.filter(p => p.name !== p1.name);
     let p2 = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-    let ch = allChallengesFlat()[Math.floor(Math.random() * allChallengesFlat().length)];
+    let ch = pickChallenge().challenge;
 
     if (isGolden) {
         buildReel('reel-1', generatePlayerStrip(goldItem()));
@@ -102,7 +129,7 @@ function spinSlots() {
 
     setTimeout(() => {
         btnSpin.disabled = false;
-        showSlotModal(p1, p2, ch, isGolden);
+        showSlotModal(p1, p2, ch, isGolden, forcedPlayer, forcedMilestone);
     }, endTime + (isGolden ? 2200 : 1300));
 }
 
@@ -119,11 +146,10 @@ function generatePlayerStrip(winner) {
 }
 
 function generateChallengeStrip(winner) {
-    const list = allChallengesFlat();
     const items = [];
     for (let i = 0; i < STRIP_LEN - 1; i++) {
         if (Math.random() < 0.18) { items.push(goldItem()); continue; }
-        const c = list[Math.floor(Math.random() * list.length)];
+        const c = pickChallenge().challenge;
         items.push({ text: c.text, icon: c.icon, color: '#111' });
     }
     items.push(winner);
@@ -214,23 +240,31 @@ function centerOf(el, layer) {
     return { x: r.left - lr.left + r.width / 2, y: r.top - lr.top + r.height / 2 };
 }
 
-function showSlotModal(p1, p2, ch, isGolden) {
+function showSlotModal(p1, p2, ch, isGolden, forcedPlayer = null, forcedMilestone = 0) {
     const content = document.getElementById('card-content');
     const btnClose = document.getElementById('btn-close-modal');
     const oldOnClick = btnClose.onclick;
 
     if (isGolden) {
-        const chosen = GameState.players[Math.floor(Math.random() * GameState.players.length)];
+        const chosen = forcedPlayer || GameState.players[Math.floor(Math.random() * GameState.players.length)];
         content.className = 'challenge-card cartoon-box golden';
         content.style.backgroundColor = '';
         document.getElementById('card-title').innerText = 'RETO DE ORO';
         document.getElementById('card-icon').className = 'main-icon fa-solid fa-crown';
-        document.getElementById('card-desc').innerText =
-            `¡${chosen.name} ha sacado los tres interrogantes! Invéntate un reto y el resto de jugadores tendrán que cumplirlo.`;
+        document.getElementById('card-desc').innerText = forcedPlayer
+            ? `¡${chosen.name} ha llegado a ${forcedMilestone} apariciones y se lleva el RETO DE ORO garantizado! Invéntate un reto y el resto de jugadores tendrán que cumplirlo.`
+            : `¡${chosen.name} ha sacado los tres interrogantes! Invéntate un reto y el resto de jugadores tendrán que cumplirlo.`;
     } else {
-        let cat = 'sencillos';
-        if (allChallenges['hot'].includes(ch)) cat = 'hot';
-        if (allChallenges['extremo'].includes(ch)) cat = 'extremo';
+        // Solo las tiradas normales muestran jugadores: suben su contador.
+        // Cada múltiplo de 10 (10, 20, 30...) otorga un RETO DE ORO garantizado.
+        [p1, p2].forEach(p => {
+            appearCounts[p.name] = (appearCounts[p.name] || 0) + 1;
+            if (appearCounts[p.name] % APPEARANCES_FOR_GOLDEN === 0) {
+                goldenQueue.push(p.name);
+            }
+        });
+
+        const cat = categoryOf(ch);
 
         content.className = `challenge-card cartoon-box ${cat}`;
         content.style.backgroundColor = '';
@@ -238,6 +272,8 @@ function showSlotModal(p1, p2, ch, isGolden) {
         document.getElementById('card-icon').className = `main-icon fa-solid ${ch.icon}`;
         document.getElementById('card-desc').innerText = ch.description.replace('{playerName}', 'el otro jugador');
     }
+
+    renderMaquinitaIndex();
 
     btnClose.onclick = () => {
         document.getElementById('card-modal').style.display = 'none';

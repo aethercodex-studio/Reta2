@@ -1,4 +1,5 @@
 import { initSelectorEvent } from './screens/selectorJuego.js';
+import { initMezclaUI } from './screens/mezclaUI.js';
 
 const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#8A2BE2'];
 
@@ -79,5 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initSelectorEvent();
+    initMezclaUI();
     if(GameState.players.length > 0) renderPlayers();
 });

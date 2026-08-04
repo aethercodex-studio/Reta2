@@ -1,6 +1,7 @@
 import { GameState, getRandomOtherPlayer } from '../main.js';
-import { allChallenges } from '../data/retos.js';
-import { celebrateGoldenCard, clearLayer } from '../utils/effects.js';
+import { pickChallenge, CATEGORY_COLORS, iconColorFor } from '../data/mezcla.js';
+import { celebrateGoldenCard, celebrateVictory, celebratePodium, clearLayer } from '../utils/effects.js';
+import { renderIndexRows, rankByPosition } from '../utils/playerIndex.js';
 
 // 80 celdas de rejilla: SALIDA (2) + casillas 1..76 (76) + META (2) = 8 filas exactas de 10
 const LAST_TILE = 77;
@@ -12,6 +13,14 @@ const RETRO_COUNT = 3, RETRO_MIN_GAP = 6, RETRO_MAX_GAP = 8;
 let advanceChain = [];
 let retroChain = [];
 
+// Nombres en orden de llegada a la meta. Quien termina sale del turno,
+// pero la partida sigue para pelear el 2º y 3er puesto.
+let finishOrder = [];
+
+const stillPlaying = () => GameState.players.filter(p => !finishOrder.includes(p.name));
+/** La partida acaba cuando ya solo queda un jugador por llegar (será el último). */
+const isGameOver = () => finishOrder.length >= 1 && stillPlaying().length <= 1;
+
 export function startOca() {
     window.goToScreen('oca-screen');
     generateBoard();
@@ -19,6 +28,7 @@ export function startOca() {
     GameState.playerPositions = {};
     // Todos empiezan en la casilla 0 (punto de salida)
     GameState.players.forEach(p => GameState.playerPositions[p.name] = 0);
+    finishOrder = [];
     GameState.currentPlayerIndex = 0;
     
     // Bind eventos
@@ -30,16 +40,44 @@ export function startOca() {
     drawTokens();
 }
 
+/**
+ * Índice: primero quienes ya han llegado (con su puesto definitivo) y debajo
+ * los que siguen en juego, ordenados por casilla.
+ */
 function renderPlayerIndex() {
     const list = document.getElementById('player-index-list');
     if (!list) return;
-    list.innerHTML = '';
-    GameState.players.forEach(p => {
-        const row = document.createElement('div');
-        row.className = 'index-row';
-        row.innerHTML = `<div class="index-color" style="background-color: ${p.color}"></div><span>${p.name}</span>`;
-        list.appendChild(row);
+
+    const current = GameState.players[GameState.currentPlayerIndex];
+    const rows = [];
+
+    // Ya en meta: puesto fijo por orden de llegada
+    finishOrder.forEach((name, i) => {
+        const p = GameState.players.find(x => x.name === name);
+        if (!p) return;
+        rows.push({
+            name: p.name,
+            color: p.color,
+            rank: i + 1,
+            badge: `<i class="fa-solid ${i === 0 ? 'fa-trophy' : 'fa-medal'}"></i>`,
+            done: true,
+            highlight: i === 0
+        });
     });
+
+    // Aún jugando: siguen numerando desde donde acaba el podio
+    const ranked = rankByPosition(stillPlaying(), p => GameState.playerPositions[p.name] ?? 0);
+    ranked.forEach(({ player, rank, pos }) => {
+        rows.push({
+            name: player.name,
+            color: player.color,
+            rank: finishOrder.length + rank,
+            badge: pos,
+            active: current && player.name === current.name
+        });
+    });
+
+    renderIndexRows(list, rows);
 }
 
 function bigTileHtml(icon, num, label) {
@@ -101,8 +139,8 @@ function generateBoard() {
     advanceChain = chains.advance;
     retroChain = chains.retro;
 
-    // Resto de casillas especiales
-    let specialSlots = { safe: 2, drink: 20 };
+    // Resto de casillas especiales (las de beber ya salen de la mezcla de retos)
+    let specialSlots = { safe: 2 };
     let specialMap = {};
     let availableIndexes = [];
     for (let i = 1; i <= LAST_TILE - 2; i++) {
@@ -118,8 +156,6 @@ function generateBoard() {
     };
     Object.keys(specialSlots).forEach(key => assignSpecial(key, specialSlots[key]));
 
-    const categories = ['sencillos', 'hot', 'extremo'];
-
     for (let i = 0; i <= LAST_TILE; i++) {
         let tileData = { num: i, type: 'normal' };
 
@@ -131,13 +167,11 @@ function generateBoard() {
         else if (retroChain.includes(i)) tileData.type = 'retro';
         else if (specialMap[i]) tileData.type = specialMap[i];
 
-        // Si es normal, pre-asignar un reto para extraer su color e icono
+        // Si es normal, pre-asignar un reto (según la mezcla elegida) para extraer su color e icono
         if (tileData.type === 'normal') {
-            const randomCat = categories[Math.floor(Math.random() * categories.length)];
-            const challengesList = allChallenges[randomCat];
-            const randomChallenge = challengesList[Math.floor(Math.random() * challengesList.length)];
-            tileData.challenge = randomChallenge;
-            tileData.category = randomCat;
+            const pick = pickChallenge();
+            tileData.challenge = pick.challenge;
+            tileData.category = pick.category;
         }
 
         GameState.boardTiles.push(tileData);
@@ -149,9 +183,7 @@ function generateBoard() {
         
         let iconHtml = '';
         // Asignar colores e iconos
-        if(tileData.type === 'drink') { 
-            tileEl.style.backgroundColor = '#FFD700'; iconHtml = '<i class="fa-solid fa-beer-mug-empty" style="color:black;"></i>'; 
-        } else if(tileData.type === 'advance') {
+        if(tileData.type === 'advance') {
             tileEl.classList.add('tile-warp');
             tileEl.style.backgroundColor = '#5BE37E';
             iconHtml = '<i class="fa-solid fa-forward-fast" style="color:#08471d;"></i>' +
@@ -179,10 +211,9 @@ function generateBoard() {
             board.appendChild(tileEl);
             continue;
         } else {
-            // Es un reto normal
-            tileEl.style.backgroundColor = `var(--${tileData.category})`;
-            let iconColor = tileData.category === 'extremo' ? 'white' : 'black';
-            iconHtml = `<i class="fa-solid ${tileData.challenge.icon}" style="color:${iconColor}; opacity: 0.8;"></i>`;
+            // Es una carta de reto o de beber: color según su categoría
+            tileEl.style.backgroundColor = CATEGORY_COLORS[tileData.category];
+            iconHtml = `<i class="fa-solid ${tileData.challenge.icon}" style="color:${iconColorFor(tileData.category)}; opacity: 0.8;"></i>`;
         }
 
         tileEl.innerHTML = `<span class="tile-num">${i}</span>${iconHtml}`;
@@ -206,6 +237,8 @@ function drawTokens(animPlayerName = null, animType = null) {
             tileEl.appendChild(token);
         }
     });
+    // La clasificación se recalcula con cada salto de ficha
+    renderPlayerIndex();
 }
 
 function updateTurnUI() {
@@ -220,93 +253,231 @@ function updateTurnUI() {
     document.getElementById('show-dice-btn').style.display = 'block';
 }
 
-// --- DADO 3D Y FUERZA ---
-let strengthInterval = null;
-let currentStrength = 0;
-let isCharging = false;
+// --- DADO CARTOON 2D: se toca y cae sobre la mesa ---
+// La caída ES el encogimiento: el dado empieza grande (cerca) y se va haciendo
+// pequeño hasta "tocar" la mesa. En ese instante bota y sigue girando desde el
+// mismo sitio y con el mismo tamaño, así que se ve como una sola animación.
+const FALL_MS = 800;           // encogerse = caer
+const SPIN_MS = 1500;          // botar y girar hasta pararse
+// Reposo 210px -> mesa 142px (contenedor a tamaño máximo): el encogimiento se nota
+const TABLE_SCALE = 0.676;     // tamaño al llegar a la mesa
+const FALL_TURN = 190;         // grados que ya lleva girados al tocar la mesa
+
 let isRolling = false;
 let diceEventsBound = false;
+let faceShuffleTimer = null;
+let dropTimers = [];
+
+// Posición de los puntos de cada cara, en un lienzo de 100x100
+const DICE_PIPS = {
+    1: [[50, 50]],
+    2: [[31, 31], [69, 69]],
+    3: [[31, 31], [50, 50], [69, 69]],
+    4: [[31, 31], [69, 31], [31, 69], [69, 69]],
+    5: [[31, 31], [69, 31], [50, 50], [31, 69], [69, 69]],
+    6: [[31, 28], [69, 28], [31, 50], [69, 50], [31, 72], [69, 72]]
+};
+
+/** Cuerpo del dado en SVG: trazo grueso, relleno plano y un brillo. Vectorial = nítido a cualquier tamaño. */
+function buildDiceSvg() {
+    const dice = document.getElementById('dice-cube');
+    if (dice.querySelector('svg')) return;
+    dice.innerHTML = `
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+                <linearGradient id="diceBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFF3B0"/>
+                    <stop offset="45%" stop-color="#FFD700"/>
+                    <stop offset="100%" stop-color="#F0A500"/>
+                </linearGradient>
+            </defs>
+            <rect x="7" y="9" width="86" height="86" rx="21" fill="#000"/>
+            <rect x="7" y="7" width="86" height="86" rx="21" fill="url(#diceBody)" stroke="#000" stroke-width="6"/>
+            <path d="M18 30 Q22 14 38 13 Q28 20 26 32 Z" fill="#FFFFFF" opacity="0.75"/>
+            <g id="dice-pips"></g>
+        </svg>`;
+}
+
+function renderDiceFace(value) {
+    const group = document.getElementById('dice-pips');
+    if (!group) return;
+    group.innerHTML = (DICE_PIPS[value] || DICE_PIPS[1])
+        .map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="8.6" fill="#1a1a1a"/>`)
+        .join('');
+}
 
 function bindDiceEvents() {
     if(diceEventsBound) return;
     const dc = document.getElementById('dice-canvas-container');
-    dc.addEventListener('mousedown', startCharging);
-    dc.addEventListener('touchstart', startCharging, {passive: true});
-    
-    document.addEventListener('mouseup', releaseDice);
-    document.addEventListener('touchend', releaseDice);
+
+    // Pointer Events unifica ratón, dedo y lápiz en un solo evento: así no se
+    // duplica la pulsación en pantallas táctiles (touchstart + mousedown emulado).
+    if (window.PointerEvent) {
+        dc.addEventListener('pointerdown', onDiceTap);
+    } else {
+        dc.addEventListener('click', onDiceTap);
+    }
+
     diceEventsBound = true;
+}
+
+function onDiceTap(e) {
+    if (isRolling) return;
+    if (document.getElementById('dice-canvas-container').style.display === 'none') return;
+    if (e && e.cancelable) e.preventDefault();
+    isRolling = true;
+    dropDice();
+}
+
+function clearDropTimers() {
+    dropTimers.forEach(t => clearTimeout(t));
+    dropTimers = [];
+    clearTimeout(faceShuffleTimer);
 }
 
 function showDice() {
     document.getElementById('show-dice-btn').style.display = 'none';
     const dc = document.getElementById('dice-canvas-container');
     dc.style.display = 'flex';
-    
-    currentStrength = 0;
-    isCharging = false;
+
     isRolling = false;
-    document.getElementById('strength-bar').style.width = '0%';
-    
-    const cube = document.getElementById('dice-cube');
-    cube.style.transition = 'none';
-    cube.style.transform = 'translateZ(-60px) rotateX(-15deg) rotateY(-15deg)';
+    clearDropTimers();
+
+    buildDiceSvg();
+    renderDiceFace(1 + Math.floor(Math.random() * 6));
+
+    document.getElementById('dice-instructions').innerText = 'Toca el dado para tirar';
+
+    // En reposo el dado está GRANDE (cerca) y con la sombra amplia y suave
+    const dice = document.getElementById('dice-cube');
+    dice.style.transition = 'none';
+    dice.style.transform = 'rotate(-7deg)';
+
+    const fall = document.getElementById('dice-fall');
+    fall.style.transition = 'none';
+    fall.style.transform = 'scale(1)';
+
+    const drift = document.getElementById('dice-drift');
+    drift.style.transition = 'none';
+    drift.style.transform = 'translateX(0)';
+
+    const shadow = document.getElementById('dice-shadow');
+    shadow.classList.remove('bouncing');
+    shadow.style.transition = 'none';
+    shadow.style.transform = 'translateX(-50%) scale(1.45)';
+    shadow.style.opacity = '0.12';
+
+    const hop = document.getElementById('dice-hop');
+    hop.classList.remove('bouncing');
+    void hop.offsetWidth;
+    hop.classList.add('idle');           // flota para invitar a tocarlo
+
+    document.getElementById('dice-impact').classList.remove('pop');
 }
 
-function startCharging(e) {
-    if (isRolling || document.getElementById('dice-canvas-container').style.display === 'none') return;
-    isCharging = true;
-    currentStrength = 0;
-    
-    strengthInterval = setInterval(() => {
-        currentStrength += 3; // Fill up over ~600ms to max
-        if (currentStrength > 100) currentStrength = 100;
-        document.getElementById('strength-bar').style.width = currentStrength + '%';
-    }, 20);
-}
-
-function releaseDice() {
-    if (!isCharging || isRolling) return;
-    isCharging = false;
-    clearInterval(strengthInterval);
-    
-    if (currentStrength < 10) currentStrength = 10;
-    
-    isRolling = true;
-    roll3DDice(currentStrength);
-}
-
-function roll3DDice(strength) {
+/**
+ * Fase 1 — LA CAÍDA: el dado se encoge (se aleja hacia la mesa) girando ya un
+ * poco y acelerando, como cualquier cosa que cae. No se teletransporta: se
+ * queda donde está y solo cambia de tamaño.
+ */
+function dropDice() {
     const roll = Math.floor(Math.random() * 6) + 1;
-    
-    const faceRotations = {
-        1: { x: 0, y: 0 },
-        2: { x: -90, y: 0 },
-        3: { x: 0, y: -90 },
-        4: { x: 0, y: 90 },
-        5: { x: 90, y: 0 },
-        6: { x: 180, y: 0 }
-    };
-    
-    const target = faceRotations[roll];
-    let powerLevel = Math.ceil((strength / 100) * 5);
-    let extraSpins = powerLevel * 2;
-    
-    // Add random slight variation so it doesn't always end up perfectly straight
-    let randomOffset = (Math.random() * 20) - 10;
-    let finalX = target.x + (360 * extraSpins) + randomOffset;
-    let finalY = target.y + (360 * extraSpins) + randomOffset;
-    
-    const cube = document.getElementById('dice-cube');
-    let duration = 0.5 + (strength / 100) * 1.5;
-    
-    cube.style.transition = `transform ${duration}s cubic-bezier(0.25, 1, 0.5, 1)`;
-    cube.style.transform = `translateZ(-60px) rotateX(${finalX}deg) rotateY(${finalY}deg)`;
-    
-    setTimeout(() => {
+    const dir = Math.random() > 0.5 ? 1 : -1;
+
+    const dice = document.getElementById('dice-cube');
+    const fall = document.getElementById('dice-fall');
+    const shadow = document.getElementById('dice-shadow');
+    const hop = document.getElementById('dice-hop');
+
+    hop.classList.remove('idle');
+    document.getElementById('dice-instructions').innerText = '¡Allá va!';
+
+    const EASE_IN = 'cubic-bezier(0.45, 0, 0.95, 0.6)';
+
+    // Se encoge apoyado en la mesa: ESTA es la caída. Acelera (ease-in).
+    fall.style.transition = `transform ${FALL_MS}ms ${EASE_IN}`;
+    fall.style.transform = `scale(${TABLE_SCALE})`;
+
+    // Y ya va girando un poco mientras cae
+    dice.style.transition = `transform ${FALL_MS}ms ${EASE_IN}`;
+    dice.style.transform = `rotate(${dir * FALL_TURN}deg)`;
+
+    // La sombra se cierra y oscurece a medida que el dado se acerca a la mesa
+    shadow.style.transition = `transform ${FALL_MS}ms cubic-bezier(0.45, 0, 0.95, 0.6), opacity ${FALL_MS}ms ease-in`;
+    shadow.style.transform = 'translateX(-50%) scale(1)';
+    shadow.style.opacity = '0.36';
+
+    // Las caras empiezan a cambiar ya durante la caída y no paran hasta el final
+    startFaceShuffle(FALL_MS + SPIN_MS);
+
+    dropTimers.push(setTimeout(() => bounceAndSpin(roll, dir), FALL_MS));
+}
+
+/**
+ * Fase 2 — EL BOTE: arranca exactamente donde y como acabó la caída (misma
+ * posición, mismo tamaño, mismo ángulo) y sigue girando hasta frenar.
+ */
+function bounceAndSpin(roll, dir) {
+    const stage = document.getElementById('dice-stage');
+    const dice = document.getElementById('dice-cube');
+    const drift = document.getElementById('dice-drift');
+    const hop = document.getElementById('dice-hop');
+    const shadow = document.getElementById('dice-shadow');
+    const impact = document.getElementById('dice-impact');
+
+    stage.style.setProperty('--spin-dur', `${SPIN_MS}ms`);
+
+    const spins = 2 + Math.floor(Math.random() * 3);
+    const tilt = (Math.random() * 22) - 11;              // no acaba perfectamente recto
+
+    // El giro CONTINÚA desde FALL_TURN (no se reinicia) y la escala se queda
+    // fija en la de mesa: por eso las dos fases se leen como una sola animación.
+    const totalTurn = dir * (FALL_TURN + spins * 360) + tilt;
+    dice.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.16, 0.78, 0.18, 1)`;
+    dice.style.transform = `rotate(${totalTurn.toFixed(1)}deg)`;
+
+    // Al botar se desvía un poco de lado, como si rodara
+    const driftX = dir * (3 + Math.random() * 5);
+    drift.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.15, 0.8, 0.2, 1)`;
+    drift.style.transform = `translateX(${driftX.toFixed(1)}%)`;
+
+    // Botes verticales + sombra sincronizada, ambos partiendo de translateY(0)
+    shadow.style.transition = 'none';
+    hop.classList.remove('bouncing');
+    shadow.classList.remove('bouncing');
+    void hop.offsetWidth;
+    hop.classList.add('bouncing');
+    shadow.classList.add('bouncing');
+
+    // Anillo de impacto: justo al tocar la mesa
+    impact.classList.remove('pop');
+    void impact.offsetWidth;
+    impact.classList.add('pop');
+
+    dropTimers.push(setTimeout(() => {
+        clearTimeout(faceShuffleTimer);
+        renderDiceFace(roll);
+        document.getElementById('dice-instructions').innerText = `¡${roll}!`;
+    }, SPIN_MS));
+
+    dropTimers.push(setTimeout(() => {
         document.getElementById('dice-canvas-container').style.display = 'none';
         moveCurrentPlayer(roll);
-    }, duration * 1000 + 500);
+    }, SPIN_MS + 700));
+}
+
+/** Cambia de cara cada vez más despacio durante todo el lanzamiento. */
+function startFaceShuffle(totalMs) {
+    clearTimeout(faceShuffleTimer);
+    let delay = 55;
+    let elapsed = 0;
+    const step = () => {
+        renderDiceFace(1 + Math.floor(Math.random() * 6));
+        elapsed += delay;
+        delay *= 1.19;
+        if (elapsed + delay < totalMs - 150) faceShuffleTimer = setTimeout(step, delay);
+    };
+    step();
 }
 
 // --- RESOLUCIÓN DE CASILLAS ---
@@ -350,7 +521,7 @@ function resolveTile(pos) {
 
     switch(tile.type) {
         case 'start': showModal = false; break;
-        case 'end': alert(`¡${cp.name} HA GANADO!`); window.goToScreen('menu-screen'); return;
+        case 'end': handleFinish(cp); return;
         case 'safe': cardData = { text: 'CASILLA SEGURA', icon: 'fa-shield-halved', desc: '¡Te has librado!', cat: 'sencillos' }; break;
         case 'advance': {
             const next = advanceChain.find(n => n > pos);
@@ -384,7 +555,6 @@ function resolveTile(pos) {
             warpStep = true;
             break;
         }
-        case 'drink': cardData = { text: '¡A BEBER!', icon: 'fa-beer-mug-empty', desc: 'Bebe, te lo mereces.', cat: 'hot' }; break;
         case 'penultimate': cardData = { text: '¡CASI!', icon: 'fa-skull', desc: 'Retrocedes 5 casillas.', cat: 'extremo' }; finalPos = Math.max(0, pos - 5); break;
         case 'golden': cardData = {
             text: 'RETO DE ORO', icon: 'fa-crown',
@@ -410,6 +580,71 @@ function resolveTile(pos) {
 
 let pendingFinalPos = null;
 let pendingStepMs = 400;
+
+/** Un jugador llega a la meta: se le da su puesto y la partida continúa. */
+function handleFinish(player) {
+    if (!finishOrder.includes(player.name)) finishOrder.push(player.name);
+    const place = finishOrder.length;
+    renderPlayerIndex();
+    showFinishCard(player, place);
+}
+
+/**
+ * Carta de llegada a meta. El 1º se lleva el premio de poner una regla;
+ * el resto pelea por el podio y la partida sigue.
+ */
+function showFinishCard(player, place) {
+    pendingFinalPos = null;
+    const isWinner = place === 1;
+
+    const content = document.getElementById('card-content');
+    content.className = `challenge-card cartoon-box ${isWinner ? 'golden' : 'sencillos'}`;
+    content.style.backgroundColor = '';
+    document.getElementById('card-title').innerText = isWinner ? '¡HAS GANADO!' : `¡${place}º PUESTO!`;
+    document.getElementById('card-icon').className = `main-icon fa-solid ${isWinner ? 'fa-trophy' : 'fa-medal'}`;
+    document.getElementById('card-desc').innerText = isWinner
+        ? `¡${player.name} ha ganado! Como recompensa, puedes elegir una regla para el resto de jugadores hasta que termine la partida.`
+        : `¡${player.name} ha llegado a la meta en ${place}º puesto! El resto de jugadores sigue peleando por el podio.`;
+
+    const btnClose = document.getElementById('btn-close-modal');
+    btnClose.onclick = () => {
+        document.getElementById('card-modal').style.display = 'none';
+        clearLayer(document.getElementById('modal-particles'));
+        btnClose.onclick = closeCardModal;
+
+        if (isGameOver()) showFinalStandings();
+        else nextTurn();
+    };
+
+    document.getElementById('card-modal').style.display = 'flex';
+    if (isWinner) celebrateVictory();
+    else celebratePodium();
+}
+
+/** Clasificación final: el jugador que queda cierra la tabla en último puesto. */
+function showFinalStandings() {
+    stillPlaying().forEach(p => finishOrder.push(p.name));
+    renderPlayerIndex();
+
+    const content = document.getElementById('card-content');
+    content.className = 'challenge-card cartoon-box golden standings';
+    content.style.backgroundColor = '';
+    document.getElementById('card-title').innerText = '¡FIN DE LA PARTIDA!';
+    document.getElementById('card-icon').className = 'main-icon fa-solid fa-ranking-star';
+    document.getElementById('card-desc').innerText =
+        finishOrder.map((name, i) => `${i + 1}º  ${name}`).join('\n');
+
+    const btnClose = document.getElementById('btn-close-modal');
+    btnClose.onclick = () => {
+        document.getElementById('card-modal').style.display = 'none';
+        clearLayer(document.getElementById('modal-particles'));
+        btnClose.onclick = closeCardModal;
+        window.goToScreen('menu-screen');
+    };
+
+    document.getElementById('card-modal').style.display = 'flex';
+    celebrateVictory();
+}
 
 function showCard(data) {
     pendingFinalPos = data.finalPos;
@@ -441,6 +676,13 @@ function closeCardModal() {
 }
 
 function nextTurn() {
-    GameState.currentPlayerIndex = (GameState.currentPlayerIndex + 1) % GameState.players.length;
+    if (isGameOver()) { showFinalStandings(); return; }
+
+    // Se salta a quien ya ha llegado a la meta
+    const total = GameState.players.length;
+    for (let i = 0; i < total; i++) {
+        GameState.currentPlayerIndex = (GameState.currentPlayerIndex + 1) % total;
+        if (!finishOrder.includes(GameState.players[GameState.currentPlayerIndex].name)) break;
+    }
     updateTurnUI();
 }
