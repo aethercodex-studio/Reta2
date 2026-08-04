@@ -397,6 +397,39 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
     border-color: var(--gold-dark); box-shadow: 4px 4px 0 var(--gold-dark);
 }
 
+.challenge-card.silver {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 18%, #c0c0c0 34%, #808080 50%, #c0c0c0 66%, #e0e0e0 82%, #f5f5f5 100%);
+    background-size: 300% 300%;
+    color: #333;
+    border-color: #555;
+    animation: goldShift 5s ease-in-out infinite, goldGlow 2.4s ease-in-out infinite;
+    overflow: hidden;
+}
+.challenge-card.silver::before {
+    content: '';
+    position: absolute; top: -30%; left: 0; width: 45%; height: 160%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+    animation: goldShine 2.8s ease-in-out infinite;
+    pointer-events: none;
+}
+.challenge-card.silver h2 {
+    font-size: 2rem;
+    color: #ffffff;
+    -webkit-text-stroke: 2px #555;
+    text-shadow: 3px 3px 0 #555;
+    letter-spacing: 1px;
+}
+.challenge-card.silver i.main-icon {
+    color: #ffffff;
+    -webkit-text-stroke: 3px #555;
+    text-shadow: 0 0 24px #e0e0e0, 4px 4px 0 rgba(85, 85, 85, 0.55);
+}
+.challenge-card.silver p { font-weight: bold; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+.challenge-card.silver .close-card-btn {
+    background: linear-gradient(180deg, #f5f5f5, #c0c0c0);
+    border-color: #555; box-shadow: 4px 4px 0 #555;
+}
+
 /* ===== PARTÍCULAS / CONFETI ===== */
 .particle-layer { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 60; }
 #modal-particles { position: fixed; inset: 0; z-index: 1; }
@@ -436,14 +469,14 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
 .wheel-icon { pointer-events: none; }
 .wheel-hub {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 14%; height: 14%; border-radius: 50%; border: 5px solid #000;
+    width: 24%; height: 24%; border-radius: 50%; border: 5px solid #000;
     background: linear-gradient(150deg, #fff8d0, #ffd700 45%, #b8860b);
     box-shadow: 0 0 0 4px rgba(0,0,0,0.25), inset 0 0 12px rgba(0,0,0,0.35);
     display: flex; align-items: center; justify-content: center;
-    color: var(--gold-ink); font-size: clamp(0.9rem, 2.2vw, 1.8rem); z-index: 5;
+    color: var(--gold-ink); font-size: clamp(1.4rem, 3vw, 2.5rem); z-index: 5;
 }
 .wheel-pointer {
-    position: absolute; top: -34px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
     font-size: 5rem; color: #fff; z-index: 10; text-shadow: 3px 3px 0px #000, -3px -3px 0px #000, 3px -3px 0px #000, -3px 3px 0px #000;
 }
 .ruleta-hint { text-align: center; font-size: 1.1rem; margin: 10px 0 0; }

@@ -3,6 +3,50 @@ import { pickChallenge, CATEGORY_COLORS, iconColorFor } from '../data/mezcla.js'
 import { celebrateGoldenCard, celebrateVictory, celebratePodium, clearLayer } from '../utils/effects.js';
 import { renderIndexRows, rankByPosition } from '../utils/playerIndex.js';
 
+// --- INICIO CONFIGURACIÓN DE AUDIO (DADO + PREMIO) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let diceBuffer = null;
+let prizeBuffer = null;
+let jumpBuffer = null;
+
+// Cargar el sonido del salto
+fetch('/media/audio/jump.mp3')
+    .then(res => res.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => jumpBuffer = buffer)
+    .catch(err => console.error("Error cargando el audio jump:", err));
+
+// Cargar el sonido del dado en memoria al inicializar
+fetch('/media/audio/dice.mp3')
+    .then(res => res.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => diceBuffer = buffer)
+    .catch(err => console.error("Error cargando el audio del dado:", err));
+
+// Cargar el sonido del premio dorado
+fetch('/media/audio/prize.mp3')
+    .then(res => res.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => prizeBuffer = buffer)
+    .catch(err => console.error("Error cargando el audio prize:", err));
+
+function playSound(buffer, volume = 0.8) {
+    if (!buffer) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = volume;
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    source.start();
+}
+
+function playDiceSound() {
+    playSound(diceBuffer, 0.8);
+}
+// --- FIN CONFIGURACIÓN DE AUDIO (DADO + PREMIO) ---
+
 // 80 celdas de rejilla: SALIDA (2) + casillas 1..76 (76) + META (2) = 8 filas exactas de 10
 const LAST_TILE = 77;
 
@@ -38,6 +82,26 @@ export function startOca() {
 
     updateTurnUI();
     drawTokens();
+    
+    // --- Comandos de depuración (God Mode) ---
+    window.godMode = function(playerName, pos) {
+        if (GameState.playerPositions[playerName] !== undefined) {
+            GameState.playerPositions[playerName] = Math.max(0, Math.min(LAST_TILE, pos));
+            drawTokens();
+            console.log(`[God Mode] Jugador ${playerName} movido a la casilla ${GameState.playerPositions[playerName]}`);
+        } else {
+            console.warn(`[God Mode] Jugador ${playerName} no encontrado.`);
+        }
+    };
+    window.moveCurrent = function(pos) {
+        const cp = GameState.players[GameState.currentPlayerIndex];
+        if (cp) window.godMode(cp.name, pos);
+    };
+
+    console.log("%c👑 GOD MODE ACTIVADO", "color: gold; font-size: 16px; font-weight: bold; text-shadow: 1px 1px 2px black;");
+    console.log("%cComandos disponibles:", "color: #4CAF50; font-size: 14px; font-weight: bold;");
+    console.log("👉 %cmoveCurrent(casilla)%c - Mueve al jugador del turno actual a la casilla indicada. (ej: moveCurrent(75))", "color: #2196F3; font-weight: bold;", "color: inherit;");
+    console.log("👉 %cgodMode('Nombre', casilla)%c - Mueve al jugador indicado a la casilla especificada.", "color: #2196F3; font-weight: bold;", "color: inherit;");
 }
 
 /**
@@ -140,7 +204,7 @@ function generateBoard() {
     retroChain = chains.retro;
 
     // Resto de casillas especiales (las de beber ya salen de la mezcla de retos)
-    let specialSlots = { safe: 2 };
+    let specialSlots = { safe: 6 };
     let specialMap = {};
     let availableIndexes = [];
     for (let i = 1; i <= LAST_TILE - 2; i++) {
@@ -148,10 +212,16 @@ function generateBoard() {
         availableIndexes.push(i);
     }
 
-    const assignSpecial = (type, count) => {
+    const assignSpecial = (type, count, minGap = 5) => {
+        let placed = [];
         for(let i=0; i<count; i++) {
-            let rIdx = Math.floor(Math.random() * availableIndexes.length);
-            specialMap[availableIndexes.splice(rIdx, 1)[0]] = type;
+            let validIndexes = availableIndexes.filter(idx => placed.every(p => Math.abs(idx - p) >= minGap));
+            if (validIndexes.length === 0) break;
+            let rIdx = Math.floor(Math.random() * validIndexes.length);
+            let chosen = validIndexes.splice(rIdx, 1)[0];
+            specialMap[chosen] = type;
+            placed.push(chosen);
+            availableIndexes = availableIndexes.filter(idx => idx !== chosen);
         }
     };
     Object.keys(specialSlots).forEach(key => assignSpecial(key, specialSlots[key]));
@@ -326,6 +396,9 @@ function onDiceTap(e) {
     if (document.getElementById('dice-canvas-container').style.display === 'none') return;
     if (e && e.cancelable) e.preventDefault();
     isRolling = true;
+    
+    playDiceSound(); // REPRODUCE EL SONIDO JUSTO AL TOCAR
+    
     dropDice();
 }
 
@@ -497,6 +570,7 @@ function animatePlayerTo(targetPos, callback, stepMs = 400) {
             currentStep += step;
             GameState.playerPositions[cp.name] = currentStep;
             drawTokens(cp.name, currentStep !== targetPos ? 'normal' : 'big');
+            playSound(jumpBuffer, 0.4);
         } else {
             clearInterval(jumpInterval);
             if (callback) setTimeout(callback, stepMs);
@@ -506,8 +580,40 @@ function animatePlayerTo(targetPos, callback, stepMs = 400) {
 
 function moveCurrentPlayer(roll) {
     const cp = GameState.players[GameState.currentPlayerIndex];
-    let newPos = Math.min(LAST_TILE, GameState.playerPositions[cp.name] + roll);
-    animatePlayerTo(newPos, () => resolveTile(newPos));
+    const currentPos = GameState.playerPositions[cp.name];
+    const target = currentPos + roll;
+
+    if (target > LAST_TILE) {
+        const extra = target - LAST_TILE;
+        const finalPos = LAST_TILE - extra;
+        
+        animatePlayerTo(LAST_TILE, () => {
+            showSilverOvershootCard();
+            setTimeout(() => {
+                closeSilverOvershootCard();
+                animatePlayerTo(finalPos, () => resolveTile(finalPos));
+            }, 2000);
+        });
+    } else {
+        animatePlayerTo(target, () => resolveTile(target));
+    }
+}
+
+function showSilverOvershootCard() {
+    const content = document.getElementById('card-content');
+    content.className = 'challenge-card cartoon-box silver';
+    content.style.backgroundColor = '';
+    document.getElementById('card-title').innerText = '¡CASI!';
+    document.getElementById('card-icon').className = 'main-icon fa-solid fa-arrow-rotate-left';
+    document.getElementById('card-desc').innerText = 'Retrocede los puntos extra.';
+    
+    document.getElementById('btn-close-modal').style.display = 'none';
+    document.getElementById('card-modal').style.display = 'flex';
+}
+
+function closeSilverOvershootCard() {
+    document.getElementById('card-modal').style.display = 'none';
+    document.getElementById('btn-close-modal').style.display = 'block';
 }
 
 function resolveTile(pos) {
@@ -555,7 +661,7 @@ function resolveTile(pos) {
             warpStep = true;
             break;
         }
-        case 'penultimate': cardData = { text: '¡CASI!', icon: 'fa-skull', desc: 'Retrocedes 5 casillas.', cat: 'extremo' }; finalPos = Math.max(0, pos - 5); break;
+        case 'penultimate': cardData = { text: '¡CALAVERA!', icon: 'fa-skull', desc: 'Retrocedes 8 casillas.', cat: 'extremo' }; finalPos = Math.max(0, pos - 8); break;
         case 'golden': cardData = {
             text: 'RETO DE ORO', icon: 'fa-crown',
             desc: `¡${cp.name} ha llegado a la casilla dorada! Invéntate un reto y el resto de jugadores tendrán que cumplirlo.`,
@@ -617,8 +723,12 @@ function showFinishCard(player, place) {
     };
 
     document.getElementById('card-modal').style.display = 'flex';
-    if (isWinner) celebrateVictory();
-    else celebratePodium();
+    if (isWinner) {
+        playSound(prizeBuffer, 1.0);
+        celebrateVictory();
+    } else {
+        celebratePodium();
+    }
 }
 
 /** Clasificación final: el jugador que queda cierra la tabla en último puesto. */
@@ -657,7 +767,10 @@ function showCard(data) {
     document.getElementById('card-desc').innerText = data.desc;
     document.getElementById('card-modal').style.display = 'flex';
 
-    if (data.cat === 'golden') celebrateGoldenCard();
+    if (data.cat === 'golden') {
+        playSound(prizeBuffer, 1.0);
+        celebrateGoldenCard();
+    }
 }
 
 function closeCardModal() {

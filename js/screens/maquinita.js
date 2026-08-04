@@ -3,6 +3,38 @@ import { pickChallenge, categoryOf } from '../data/mezcla.js';
 import { burstParticles, confettiRain, goldenExplosion, clearLayer, celebrateGoldenCard, GOLD_PALETTE } from '../utils/effects.js';
 import { renderIndexRows } from '../utils/playerIndex.js';
 
+// --- INICIO CONFIGURACIÓN DE AUDIO (SLOT MACHINE) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let slotBuffer = null;
+let prizeBuffer = null;
+
+// Cargar el sonido principal de la tirada
+fetch('/media/audio/slot.mp3')
+    .then(res => res.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => slotBuffer = buffer)
+    .catch(err => console.error("Error cargando el audio slot:", err));
+
+// Cargar el sonido del premio dorado
+fetch('/media/audio/prize.mp3')
+    .then(res => res.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => prizeBuffer = buffer)
+    .catch(err => console.error("Error cargando el audio prize:", err));
+
+function playSound(buffer, volume = 0.8) {
+    if (!buffer) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = volume;
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    source.start();
+}
+// --- FIN CONFIGURACIÓN DE AUDIO (SLOT MACHINE) ---
+
 const ITEM_H = 160;            // debe coincidir con .slot-item / .reel-viewport en el CSS
 const STRIP_LEN = 26;          // items por rodillo; el último es el resultado
 const GOLDEN_CHANCE = 0.05;    // probabilidad de que salgan ? ? ?
@@ -82,6 +114,9 @@ function spinSlots() {
     btnSpin.disabled = true;
     resetSlotVisuals();
 
+    // Reproducir sonido principal de la tirada
+    playSound(slotBuffer, 0.7);
+
     const lever = document.getElementById('slot-lever');
     lever.classList.add('pulled');
     setTimeout(() => lever.classList.remove('pulled'), 450);
@@ -91,9 +126,9 @@ function spinSlots() {
     //  2) aleatorio, con GOLDEN_CHANCE en cualquier tirada y para cualquier jugador
     const forcedName = goldenQueue.length ? goldenQueue.shift() : null;
     const forcedPlayer = forcedName ? GameState.players.find(p => p.name === forcedName) : null;
-    // El contador NO se reinicia: sigue sumando y vuelve a premiar en el siguiente múltiplo de 10
     const forcedMilestone = forcedPlayer ? (appearCounts[forcedPlayer.name] || 0) : 0;
     const isGolden = forcedPlayer ? true : Math.random() < GOLDEN_CHANCE;
+    const isSafe = !isGolden && (Math.random() < 0.1);
 
     // Resultado del tiro
     let p1 = GameState.players[Math.floor(Math.random() * GameState.players.length)];
@@ -105,6 +140,10 @@ function spinSlots() {
         buildReel('reel-1', generatePlayerStrip(goldItem()));
         buildReel('reel-2', generatePlayerStrip(goldItem()));
         buildReel('reel-3', generateChallengeStrip(goldItem()));
+    } else if (isSafe) {
+        buildReel('reel-1', generatePlayerStrip({ text: p1.name, icon: 'fa-user', color: p1.color }));
+        buildReel('reel-2', generatePlayerStrip({ text: p2.name, icon: 'fa-user', color: p2.color }));
+        buildReel('reel-3', generateChallengeStrip({ text: 'ZONA SEGURA', icon: 'fa-shield-halved', color: 'blue' }));
     } else {
         buildReel('reel-1', generatePlayerStrip({ text: p1.name, icon: 'fa-user', color: p1.color }));
         buildReel('reel-2', generatePlayerStrip({ text: p2.name, icon: 'fa-user', color: p2.color }));
@@ -124,12 +163,17 @@ function spinSlots() {
     // Celebración final y carta
     const endTime = STOP_TIMES[STOP_TIMES.length - 1] + 200;
     setTimeout(() => {
-        celebrateWin(isGolden);
+        celebrateWin(isGolden, isSafe);
+        
+        // Reproducir sonido especial si es Reto de Oro
+        if (isGolden) {
+            playSound(prizeBuffer, 1.0);
+        }
     }, endTime);
 
     setTimeout(() => {
         btnSpin.disabled = false;
-        showSlotModal(p1, p2, ch, isGolden, forcedPlayer, forcedMilestone);
+        showSlotModal(p1, p2, ch, isGolden, forcedPlayer, forcedMilestone, isSafe);
     }, endTime + (isGolden ? 2200 : 1300));
 }
 
@@ -209,14 +253,14 @@ function onReelStop(reelNumber, isGolden) {
     });
 }
 
-function celebrateWin(isGolden) {
+function celebrateWin(isGolden, isSafe = false) {
     const layer = document.getElementById('slot-particles');
     const machine = document.getElementById('slot-machine');
     const banner = document.getElementById('slot-win-banner');
     const { x, y } = centerOf(machine, layer);
 
     banner.style.opacity = '1';
-    banner.querySelector('span').innerText = isGolden ? '¡¡¡RETO DE ORO!!!' : '¡PREMIO!';
+    banner.querySelector('span').innerText = isGolden ? '¡¡¡RETO DE ORO!!!' : (isSafe ? '¡ZONA SEGURA!' : '¡PREMIO!');
     banner.classList.remove('show', 'gold');
     void banner.offsetWidth;
     banner.classList.add('show');
@@ -240,7 +284,7 @@ function centerOf(el, layer) {
     return { x: r.left - lr.left + r.width / 2, y: r.top - lr.top + r.height / 2 };
 }
 
-function showSlotModal(p1, p2, ch, isGolden, forcedPlayer = null, forcedMilestone = 0) {
+function showSlotModal(p1, p2, ch, isGolden, forcedPlayer = null, forcedMilestone = 0, isSafe = false) {
     const content = document.getElementById('card-content');
     const btnClose = document.getElementById('btn-close-modal');
     const oldOnClick = btnClose.onclick;
@@ -254,6 +298,12 @@ function showSlotModal(p1, p2, ch, isGolden, forcedPlayer = null, forcedMileston
         document.getElementById('card-desc').innerText = forcedPlayer
             ? `¡${chosen.name} ha llegado a ${forcedMilestone} apariciones y se lleva el RETO DE ORO garantizado! Invéntate un reto y el resto de jugadores tendrán que cumplirlo.`
             : `¡${chosen.name} ha sacado los tres interrogantes! Invéntate un reto y el resto de jugadores tendrán que cumplirlo.`;
+    } else if (isSafe) {
+        content.className = `challenge-card cartoon-box sencillos`;
+        content.style.backgroundColor = '';
+        document.getElementById('card-title').innerText = `${p1.name} y ${p2.name}`;
+        document.getElementById('card-icon').className = `main-icon fa-solid fa-shield-halved`;
+        document.getElementById('card-desc').innerText = `¡ZONA SEGURA! Os habéis librado, vuestro marcador no se ve afectado (+0).`;
     } else {
         // Solo las tiradas normales muestran jugadores: suben su contador.
         // Cada múltiplo de 10 (10, 20, 30...) otorga un RETO DE ORO garantizado.

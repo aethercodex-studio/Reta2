@@ -16,6 +16,110 @@ let lastMouseAngles = [];
 let drinkCounts = {};
 let extraSpinPending = false;
 
+// --- INICIO CONFIGURACIÓN DE AUDIO ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let tickBuffer = null;
+let lastTickTime = 0; // Guardará la marca de tiempo del último sonido reproducido
+
+// 1. Crear un nodo de ganancia (volumen) para evitar la saturación al superponer
+const gainNode = audioCtx.createGain();
+// Ajusta este valor (0.0 a 1.0) si necesitas subir o bajar el volumen del tick
+gainNode.gain.value = 0.5; 
+gainNode.connect(audioCtx.destination);
+
+// Cargar el sonido en memoria al inicializar
+fetch('/media/audio/spinningwheel.mp3')
+    .then(res => res.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => tickBuffer = buffer)
+    .catch(err => console.error("Error cargando el audio:", err));
+
+// Cargar el sonido del premio dorado
+let prizeBuffer = null;
+fetch('/media/audio/prize.mp3')
+    .then(res => res.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => prizeBuffer = buffer)
+    .catch(err => console.error("Error cargando el audio prize:", err));
+
+function playTick() {
+    if (!tickBuffer) return;
+    
+    // 2. Límite de ráfaga (Rate Limiting)
+    // audioCtx.currentTime nos da el reloj interno del motor de audio (en segundos)
+    const now = audioCtx.currentTime;
+    
+    // Si han pasado menos de 0.04 segundos (40ms) desde el último clic, lo ignoramos.
+    // Esto limita la metralleta de sonido a un máximo de 25 clics por segundo.
+    if (now - lastTickTime < 0.04) return; 
+    
+    lastTickTime = now;
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = tickBuffer;
+    
+    // Conectamos el sonido a la ganancia en lugar de directo a la salida general
+    source.connect(gainNode);
+    source.start();
+}
+
+function trackWheelTicks() {
+    const wheel = document.getElementById('ruleta-wheel');
+    const degPerSlice = 360 / SEG_COUNT;
+    let lastAngle = null;
+    let accumulatedAngle = 0;
+
+    function checkRotation() {
+        if (!isSpinning) return;
+
+        const st = window.getComputedStyle(wheel, null);
+        const tr = st.getPropertyValue("transform");
+
+        if (tr !== "none") {
+            const values = tr.split('(')[1].split(')')[0].split(',');
+            const a = parseFloat(values[0]);
+            const b = parseFloat(values[1]);
+            
+            let angle = Math.atan2(b, a) * (180 / Math.PI);
+            if (angle < 0) angle += 360;
+
+            if (lastAngle !== null) {
+                let delta = angle - lastAngle;
+                
+                if (delta < -180) delta += 360;
+                if (delta > 180) delta -= 360;
+
+                accumulatedAngle += Math.abs(delta);
+
+                if (accumulatedAngle >= degPerSlice) {
+                    playTick();
+                    // Mantenemos el sobrante matemático para no desincronizarnos
+                    accumulatedAngle %= degPerSlice;
+                }
+            }
+            lastAngle = angle;
+        }
+        
+        requestAnimationFrame(checkRotation);
+    }
+    
+    requestAnimationFrame(checkRotation);
+}
+// --- FIN CONFIGURACIÓN DE AUDIO ---
+
+// --- SONIDO DE PREMIO ---
+function playPrizeSound() {
+    if (!prizeBuffer) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const source = audioCtx.createBufferSource();
+    source.buffer = prizeBuffer;
+    const gn = audioCtx.createGain();
+    gn.gain.value = 1.0;
+    source.connect(gn);
+    gn.connect(audioCtx.destination);
+    source.start();
+}
+
 export function startRuleta() {
     window.goToScreen('ruleta-screen');
     GameState.currentPlayerIndex = 0;
@@ -80,8 +184,19 @@ function generateWheel() {
         iconColor: '#fff8d0'
     });
 
-    // Los 39 segmentos restantes (beber y retos) respetan la mezcla de porcentajes
-    for (let i = 0; i < SEG_COUNT - 1; i++) {
+    for (let i = 0; i < 4; i++) {
+        segments.push({
+            text: 'ZONA SEGURA',
+            icon: 'fa-shield-halved',
+            desc: '¡Te has librado! Tu turno termina sin penalización.',
+            cat: 'sencillos',
+            bgColor: '#FFFFFF',
+            iconColor: 'blue'
+        });
+    }
+
+    // Los 35 segmentos restantes (beber y retos) respetan la mezcla de porcentajes
+    for (let i = 0; i < SEG_COUNT - 5; i++) {
         const pick = pickChallenge();
         const rc = pick.challenge;
         const cat = pick.category;
@@ -279,6 +394,11 @@ function endDrag(e) {
     wheel.style.transition = `transform ${duration}s cubic-bezier(0.1, 0.9, 0.2, 1)`;
     wheel.style.transform = `rotate(${targetRotation}deg)`;
     
+    // --- NUEVO: Iniciar el rastreador de audio al soltar ---
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    trackWheelTicks();
+    // ---------------------------------------------------------
+    
     setTimeout(() => {
         currentRotation = targetRotation;
         isSpinning = false;
@@ -354,5 +474,8 @@ function showCard(data, onClose) {
 
     document.getElementById('card-modal').style.display = 'flex';
 
-    if (data.cat === 'golden') celebrateGoldenCard();
+    if (data.cat === 'golden') {
+        playPrizeSound();
+        celebrateGoldenCard();
+    }
 }
