@@ -1,5 +1,9 @@
 import { GameState, getRandomOtherPlayer } from '../main.js';
 import { allChallenges } from '../data/retos.js';
+import { celebrateGoldenCard, clearLayer } from '../utils/effects.js';
+
+const SEG_COUNT = 40;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 let wheelItems = [];
 let currentRotation = 0;
@@ -30,11 +34,11 @@ function generateWheel() {
     
     segments.push({
         text: 'RETO DE ORO',
-        icon: 'fa-star',
-        desc: '¡Invéntate un reto para los demás!',
+        icon: 'fa-crown',
+        desc: '¡Invéntate un reto y el resto de jugadores tendrán que cumplirlo!',
         cat: 'golden',
-        bgColor: '#FFD700',
-        iconColor: 'black'
+        bgColor: 'url(#goldGrad)',
+        iconColor: '#fff8d0'
     });
     
     for (let i = 0; i < 10; i++) {
@@ -60,38 +64,101 @@ function generateWheel() {
     
     segments.sort(() => Math.random() - 0.5);
     wheelItems = segments;
-    
+
     const wheelEl = document.getElementById('ruleta-wheel');
     wheelEl.innerHTML = '';
-    
-    let gradientParts = [];
-    const degPerSlice = 360 / 40;
-    
+
+    const degPerSlice = 360 / SEG_COUNT;
+
+    // Ruleta en SVG: así cada reto tiene su propio contorno y se distingue del vecino
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 200 200');
+    svg.setAttribute('class', 'wheel-svg');
+
+    svg.appendChild(buildGoldGradient());
+
     wheelItems.forEach((item, index) => {
-        let startDeg = index * degPerSlice;
-        let endDeg = startDeg + degPerSlice;
-        gradientParts.push(`${item.bgColor} ${startDeg}deg ${endDeg}deg`);
-        
+        const startDeg = index * degPerSlice;
+        const endDeg = startDeg + degPerSlice;
+
+        const path = document.createElementNS(SVG_NS, 'path');
+        path.setAttribute('d', slicePath(startDeg, endDeg));
+        path.setAttribute('fill', item.bgColor);
+        path.setAttribute('stroke', item.cat === 'golden' ? '#4a3200' : '#000000');
+        path.setAttribute('stroke-width', item.cat === 'golden' ? '1.4' : '0.9');
+        path.setAttribute('stroke-linejoin', 'round');
+        if (item.cat === 'golden') path.setAttribute('class', 'slice-golden');
+        svg.appendChild(path);
+    });
+
+    wheelEl.appendChild(svg);
+
+    // Iconos por encima de cada porción
+    wheelItems.forEach((item, index) => {
+        const startDeg = index * degPerSlice;
         const iconDiv = document.createElement('div');
+        iconDiv.className = 'wheel-icon';
         iconDiv.style.position = 'absolute';
         iconDiv.style.top = '0';
         iconDiv.style.left = '50%';
-        iconDiv.style.width = '20px';
+        iconDiv.style.width = '26px';
         iconDiv.style.height = '50%';
         iconDiv.style.transformOrigin = 'bottom center';
-        iconDiv.style.transform = `translateX(-50%) rotate(${startDeg + (degPerSlice/2)}deg)`;
+        iconDiv.style.transform = `translateX(-50%) rotate(${startDeg + (degPerSlice / 2)}deg)`;
         iconDiv.style.display = 'flex';
         iconDiv.style.justifyContent = 'center';
-        iconDiv.style.paddingTop = '10px';
-        
-        iconDiv.innerHTML = `<i class="fa-solid ${item.icon}" style="color:${item.iconColor}; font-size: 1rem;"></i>`;
+        iconDiv.style.paddingTop = '14px';
+
+        const extra = item.cat === 'golden'
+            ? ' -webkit-text-stroke: 1.5px #4a3200; filter: drop-shadow(0 0 6px #ffae00);'
+            : '';
+        iconDiv.innerHTML = `<i class="fa-solid ${item.icon}" style="color:${item.iconColor}; font-size: clamp(0.9rem, 1.9vw, 1.4rem);${extra}"></i>`;
         wheelEl.appendChild(iconDiv);
     });
-    
-    wheelEl.style.background = `conic-gradient(${gradientParts.join(', ')})`;
+
+    const hub = document.createElement('div');
+    hub.className = 'wheel-hub';
+    hub.innerHTML = '<i class="fa-solid fa-crown"></i>';
+    wheelEl.appendChild(hub);
+
+    wheelEl.style.background = 'transparent';
     currentRotation = 0;
     wheelEl.style.transition = 'none';
     wheelEl.style.transform = `rotate(0deg)`;
+}
+
+/** Degradado dorado premium para la porción del RETO DE ORO. */
+function buildGoldGradient() {
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const grad = document.createElementNS(SVG_NS, 'linearGradient');
+    grad.setAttribute('id', 'goldGrad');
+    grad.setAttribute('x1', '0%'); grad.setAttribute('y1', '0%');
+    grad.setAttribute('x2', '100%'); grad.setAttribute('y2', '100%');
+
+    [['0%', '#fffbe0'], ['30%', '#ffe066'], ['55%', '#ffd700'], ['80%', '#b8860b'], ['100%', '#ffd700']]
+        .forEach(([offset, color]) => {
+            const stop = document.createElementNS(SVG_NS, 'stop');
+            stop.setAttribute('offset', offset);
+            stop.setAttribute('stop-color', color);
+            grad.appendChild(stop);
+        });
+
+    defs.appendChild(grad);
+    return defs;
+}
+
+/** Porción de tarta: 0deg = arriba, sentido horario (igual que el conic-gradient original). */
+function slicePath(startDeg, endDeg) {
+    const r = 99;
+    const p1 = polar(r, startDeg);
+    const p2 = polar(r, endDeg);
+    const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+    return `M 100 100 L ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y} Z`;
+}
+
+function polar(r, deg) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return { x: (100 + r * Math.cos(rad)).toFixed(3), y: (100 + r * Math.sin(rad)).toFixed(3) };
 }
 
 function bindWheelEvents() {
@@ -194,7 +261,7 @@ function resolveWheel() {
     if (normalizedRot < 0) normalizedRot += 360;
     
     let pointerAngle = (360 - normalizedRot) % 360;
-    let index = Math.floor(pointerAngle / (360 / 40));
+    let index = Math.floor(pointerAngle / (360 / SEG_COUNT));
     let item = wheelItems[index];
     
     const cp = GameState.players[GameState.currentPlayerIndex];
@@ -212,22 +279,24 @@ function resolveWheel() {
 function showCard(data) {
     const content = document.getElementById('card-content');
     content.className = `challenge-card cartoon-box ${data.cat}`;
-    if(data.cat === 'golden') content.style.backgroundColor = '#FFD700'; 
-    
+    content.style.backgroundColor = '';
+
     document.getElementById('card-title').innerText = data.text;
     document.getElementById('card-icon').className = `main-icon fa-solid ${data.icon}`;
     document.getElementById('card-desc').innerText = data.desc;
-    
+
     const btnClose = document.getElementById('btn-close-modal');
     const oldOnClick = btnClose.onclick;
-    
+
     btnClose.onclick = () => {
         document.getElementById('card-modal').style.display = 'none';
-        content.style.backgroundColor = ''; // reset golden style
+        clearLayer(document.getElementById('modal-particles'));
         GameState.currentPlayerIndex = (GameState.currentPlayerIndex + 1) % GameState.players.length;
         updateTurnUIRuleta();
         btnClose.onclick = oldOnClick;
     };
-    
+
     document.getElementById('card-modal').style.display = 'flex';
+
+    if (data.cat === 'golden') celebrateGoldenCard();
 }

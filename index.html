@@ -34,8 +34,12 @@
             <div class="game-card cartoon-box" style="background-color: #FF6B6B;" id="btn-play-ruleta">
                 <i class="fa-solid fa-dharmachakra"></i> LA RULETA
             </div>
-            <div class="game-card cartoon-box" style="background-color: #FFE66D; color: black;" id="btn-play-maquinita">
-                <i class="fa-solid fa-slot-machine"></i> LA MAQUINITA
+            <div class="game-card cartoon-box game-card-slot" style="color: black;" id="btn-play-maquinita">
+                <span class="slot-card-icon">
+                    <i class="fa-solid fa-coins"></i>
+                    <span class="slot-card-777">777</span>
+                </span>
+                LA MAQUINITA
             </div>
         </div>
     </div>
@@ -78,7 +82,7 @@
                 </div>
                 <div id="ruleta-wheel" class="wheel"></div>
             </div>
-            <p style="text-align:center; font-size: 1.2rem; margin-top: 20px;">Arrastra para girar</p>
+            <p class="ruleta-hint">Arrastra para girar</p>
         </div>
     </div>
 
@@ -105,17 +109,50 @@
         <div class="top-bar">
             <button class="cartoon-btn" onclick="window.goToScreen('menu-screen')"><i class="fa-solid fa-house"></i></button>
         </div>
-        
-        <h2>LA MAQUINITA</h2>
-        
-        <div class="slot-machine-container cartoon-box">
-            <div class="slot-window">
-                <div class="slot-reel" id="reel-1"><div class="slot-item">?</div></div>
-                <div class="slot-reel" id="reel-2"><div class="slot-item">?</div></div>
-                <div class="slot-reel" id="reel-3"><div class="slot-item">?</div></div>
+
+        <div class="slot-stage" id="slot-stage">
+            <div class="slot-machine cartoon-box" id="slot-machine">
+                <div class="slot-marquee">
+                    <div class="bulbs bulbs-top" id="bulbs-top"></div>
+                    <h2><i class="fa-solid fa-coins"></i> LA MAQUINITA <i class="fa-solid fa-coins"></i></h2>
+                    <div class="marquee-sub">JACKPOT&nbsp;·&nbsp;777&nbsp;·&nbsp;JACKPOT</div>
+                    <div class="bulbs bulbs-bottom" id="bulbs-bottom"></div>
+                </div>
+
+                <div class="slot-window">
+                    <div class="reel-col">
+                        <div class="reel-label"><i class="fa-solid fa-user"></i> JUGADOR</div>
+                        <div class="reel-viewport" id="viewport-1">
+                            <div class="slot-reel" id="reel-1"><div class="slot-item golden-item"><span class="q-mark">?</span></div></div>
+                        </div>
+                    </div>
+                    <div class="reel-col">
+                        <div class="reel-label"><i class="fa-solid fa-user"></i> JUGADOR</div>
+                        <div class="reel-viewport" id="viewport-2">
+                            <div class="slot-reel" id="reel-2"><div class="slot-item golden-item"><span class="q-mark">?</span></div></div>
+                        </div>
+                    </div>
+                    <div class="reel-col">
+                        <div class="reel-label"><i class="fa-solid fa-bolt"></i> RETO</div>
+                        <div class="reel-viewport" id="viewport-3">
+                            <div class="slot-reel" id="reel-3"><div class="slot-item golden-item"><span class="q-mark">?</span></div></div>
+                        </div>
+                    </div>
+                    <div class="payline"></div>
+                </div>
+
+                <div class="slot-controls">
+                    <div class="slot-hint">
+                        <span class="hint-q">?</span><span class="hint-q">?</span><span class="hint-q">?</span>
+                        <span class="hint-text">= RETO DE ORO</span>
+                    </div>
+                    <button class="cartoon-btn" id="btn-spin-slot"><i class="fa-solid fa-play"></i> ¡TIRAR!</button>
+                    <div class="slot-lever" id="slot-lever"><div class="lever-stick"></div><div class="lever-ball"></div></div>
+                </div>
             </div>
-            
-            <button class="cartoon-btn" id="btn-spin-slot" style="margin-top: 30px; font-size: 1.5rem; background-color: #4ECDC4;">¡TIRAR!</button>
+
+            <div id="slot-win-banner"><span></span></div>
+            <div id="slot-particles" class="particle-layer"></div>
         </div>
     </div>
 
@@ -127,6 +164,7 @@
             <p id="card-desc">Descripción</p>
             <button class="cartoon-btn close-card-btn" id="btn-close-modal">CERRAR</button>
         </div>
+        <div id="modal-particles" class="particle-layer"></div>
     </div>
 
     <script type="module" src="./js/main.js"></script>
