@@ -9,14 +9,14 @@ let slotBuffer = null;
 let prizeBuffer = null;
 
 // Cargar el sonido principal de la tirada
-fetch('/media/audio/slot.mp3')
+fetch('media/audio/slot.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => slotBuffer = buffer)
     .catch(err => console.error("Error cargando el audio slot:", err));
 
 // Cargar el sonido del premio dorado
-fetch('/media/audio/prize.mp3')
+fetch('media/audio/prize.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => prizeBuffer = buffer)

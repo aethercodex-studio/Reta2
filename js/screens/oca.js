@@ -10,21 +10,21 @@ let prizeBuffer = null;
 let jumpBuffer = null;
 
 // Cargar el sonido del salto
-fetch('/media/audio/jump.mp3')
+fetch('media/audio/jump.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => jumpBuffer = buffer)
     .catch(err => console.error("Error cargando el audio jump:", err));
 
 // Cargar el sonido del dado en memoria al inicializar
-fetch('/media/audio/dice.mp3')
+fetch('media/audio/dice.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => diceBuffer = buffer)
     .catch(err => console.error("Error cargando el audio del dado:", err));
 
 // Cargar el sonido del premio dorado
-fetch('/media/audio/prize.mp3')
+fetch('media/audio/prize.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => prizeBuffer = buffer)

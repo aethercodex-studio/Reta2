@@ -28,7 +28,7 @@ gainNode.gain.value = 0.5;
 gainNode.connect(audioCtx.destination);
 
 // Cargar el sonido en memoria al inicializar
-fetch('/media/audio/spinningwheel.mp3')
+fetch('media/audio/spinningwheel.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => tickBuffer = buffer)
@@ -36,7 +36,7 @@ fetch('/media/audio/spinningwheel.mp3')
 
 // Cargar el sonido del premio dorado
 let prizeBuffer = null;
-fetch('/media/audio/prize.mp3')
+fetch('media/audio/prize.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => prizeBuffer = buffer)

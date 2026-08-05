@@ -10,21 +10,21 @@ let boomBuffer = null;
 let prizeBuffer = null;
 
 // Cargar el sonido de abrir la caja (el mismo "toc" de los saltos de la oca)
-fetch('/media/audio/jump.mp3')
+fetch('media/audio/jump.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => openBuffer = buffer)
     .catch(err => console.error("Error cargando el audio jump:", err));
 
 // Cargar el sonido de la explosión (traqueteo de madera del dado)
-fetch('/media/audio/dice.mp3')
+fetch('media/audio/dice.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => boomBuffer = buffer)
     .catch(err => console.error("Error cargando el audio dice:", err));
 
 // Cargar el sonido del premio dorado
-fetch('/media/audio/prize.mp3')
+fetch('media/audio/prize.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => prizeBuffer = buffer)

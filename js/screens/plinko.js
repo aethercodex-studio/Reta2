@@ -10,14 +10,14 @@ let bounceBuffer = null;
 let prizeBuffer = null;
 
 // Cargar el sonido del rebote (mismo "toc" que los saltos de la oca)
-fetch('/media/audio/jump.mp3')
+fetch('media/audio/jump.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => bounceBuffer = buffer)
     .catch(err => console.error("Error cargando el audio jump:", err));
 
 // Cargar el sonido del premio dorado
-fetch('/media/audio/prize.mp3')
+fetch('media/audio/prize.mp3')
     .then(res => res.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
     .then(buffer => prizeBuffer = buffer)
