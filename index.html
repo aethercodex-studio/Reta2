@@ -28,18 +28,55 @@
         </div>
         <h2>ELIGE MINIJUEGO</h2>
         <div class="game-menu">
-            <div class="game-card cartoon-box" style="background-color: #4ECDC4;" id="btn-play-oca">
-                <i class="fa-solid fa-dice"></i> LA OCA
+            <div class="game-card cartoon-box game-card-oca" id="btn-play-oca">
+                <span class="card-art art-dice">
+                    <span class="dado"><span></span><span></span><span></span><span></span><span></span></span>
+                </span>
+                LA OCA
             </div>
-            <div class="game-card cartoon-box" style="background-color: #FF6B6B;" id="btn-play-ruleta">
-                <i class="fa-solid fa-dharmachakra"></i> LA RULETA
+            <div class="game-card cartoon-box game-card-ruleta" id="btn-play-ruleta">
+                <span class="card-art art-wheel">
+                    <span class="rueda"><span></span><span></span><span></span><span></span></span>
+                    <span class="rueda-aguja"></span>
+                </span>
+                LA RULETA
             </div>
-            <div class="game-card cartoon-box game-card-slot" style="color: black;" id="btn-play-maquinita">
-                <span class="slot-card-icon">
-                    <i class="fa-solid fa-coins"></i>
-                    <span class="slot-card-777">777</span>
+            <div class="game-card cartoon-box game-card-slot" id="btn-play-maquinita">
+                <span class="card-art art-slot">
+                    <span class="reel"><span class="strip"><b>7</b><b>★</b><b>7</b><b>◆</b><b>7</b><b>★</b><b>7</b><b>◆</b></span></span>
+                    <span class="reel"><span class="strip"><b>★</b><b>7</b><b>◆</b><b>7</b><b>★</b><b>7</b><b>◆</b><b>7</b></span></span>
+                    <span class="reel"><span class="strip"><b>7</b><b>◆</b><b>7</b><b>★</b><b>7</b><b>◆</b><b>7</b><b>★</b></span></span>
                 </span>
                 LA MAQUINITA
+            </div>
+            <div class="game-card cartoon-box game-card-caja" id="btn-play-caja">
+                <span class="card-art art-box box-c2">
+                    <svg class="box-svg" viewBox="6 16 88 78" aria-hidden="true">
+                        <ellipse class="box-shine" cx="50" cy="30" rx="30" ry="17"/>
+                        <polygon class="face-side" points="70,46 86,32 86,76 70,90"/>
+                        <polygon class="face-top" points="14,46 30,32 86,32 70,46"/>
+                        <polygon class="face-front" points="14,46 70,46 70,90 14,90"/>
+                        <polygon class="ribbon-front" points="36,46 48,46 48,90 36,90"/>
+                        <g class="box-lid">
+                            <polygon class="lid-side" points="74,34 90,20 90,32 74,46"/>
+                            <polygon class="lid-top" points="10,34 26,20 90,20 74,34"/>
+                            <polygon class="lid-front" points="10,34 74,34 74,46 10,46"/>
+                            <polygon class="ribbon-lid-top" points="36,34 52,20 64,20 48,34"/>
+                            <polygon class="ribbon-lid-front" points="36,34 48,34 48,46 36,46"/>
+                        </g>
+                    </svg>
+                </span>
+                CAJA SORPRESA
+            </div>
+            <div class="game-card cartoon-box game-card-plinko" id="btn-play-plinko">
+                <span class="card-art art-plinko">
+                    <span class="pk-ball"></span>
+                    <span class="pk-row"><span></span><span></span><span></span></span>
+                    <span class="pk-row"><span></span><span></span></span>
+                    <span class="pk-row"><span></span><span></span><span></span></span>
+                    <span class="pk-bins"><span></span><span></span><span></span><span></span></span>
+                </span>
+                PLINKO
             </div>
         </div>
 
@@ -105,6 +142,18 @@
                     <button class="cartoon-btn" id="show-dice-btn">Tirar Dado</button>
                 </div>
                 <div class="board-container" id="oca-board"></div>
+            </div>
+        </div>
+
+        <!-- Solo salta en móvil en vertical: el tablero son 10 columnas y no cabe -->
+        <div id="oca-rotate">
+            <div class="rotate-panel cartoon-box">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                <h3>GIRA EL MÓVIL</h3>
+                <p>El tablero de LA OCA necesita la pantalla en horizontal.</p>
+                <button class="cartoon-btn" onclick="window.goToScreen('menu-screen')">
+                    <i class="fa-solid fa-house"></i> VOLVER AL MENÚ
+                </button>
             </div>
         </div>
     </div>
@@ -209,6 +258,78 @@
             <div id="slot-win-banner"><span></span></div>
             <div id="slot-particles" class="particle-layer"></div>
         </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 6: PLINKO -->
+    <div id="plinko-screen" class="screen">
+        <div class="top-bar plinko-top">
+            <button class="cartoon-btn" onclick="window.goToScreen('menu-screen')"><i class="fa-solid fa-house"></i></button>
+            <div class="plinko-headline">
+                <h2 id="plinko-turn-indicator">Turno de: ...</h2>
+                <p class="plinko-hint" id="plinko-hint">Toca una bola para elegirla</p>
+            </div>
+        </div>
+
+        <div class="mode-layout">
+            <div id="plinko-index" class="side-index cartoon-box">
+                <h3><i class="fa-solid fa-list-ol"></i> Orden de elección</h3>
+                <div id="plinko-index-list"></div>
+                <p class="index-note">Cada ronda elige primero el siguiente jugador.</p>
+            </div>
+
+            <div class="plinko-stage" id="plinko-stage">
+                <div class="plinko-viewport" id="plinko-viewport">
+                    <div class="plinko-world" id="plinko-world">
+                        <div class="plinko-baskets" id="plinko-baskets"></div>
+                        <canvas id="plinko-canvas"></canvas>
+                        <div class="plinko-balls" id="plinko-balls"></div>
+                    </div>
+                    <div id="plinko-countdown"><span>3</span></div>
+                </div>
+
+                <div class="plinko-controls">
+                    <button class="cartoon-btn" id="btn-plinko-relaunch"><i class="fa-solid fa-rotate-right"></i> VOLVER A LANZAR</button>
+                </div>
+
+                <div id="plinko-particles" class="particle-layer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 7: CAJA SORPRESA -->
+    <div id="caja-screen" class="screen">
+        <div class="top-bar caja-top">
+            <button class="cartoon-btn" onclick="window.goToScreen('menu-screen')"><i class="fa-solid fa-house"></i></button>
+            <div class="caja-headline">
+                <h2 id="caja-turn-indicator">Turno de: ...</h2>
+                <p class="caja-hint" id="caja-hint">Elige una caja</p>
+            </div>
+        </div>
+
+        <div class="mode-layout">
+            <div id="caja-index" class="side-index cartoon-box">
+                <h3><i class="fa-solid fa-gift"></i> Cajas abiertas</h3>
+                <div id="caja-index-list"></div>
+                <p class="index-note">Una caja esconde el RETO DE ORO... y otras dos son bombas.</p>
+            </div>
+
+            <div class="caja-stage" id="caja-stage">
+                <div class="caja-field" id="caja-field">
+                    <div class="caja-world" id="caja-world"></div>
+                </div>
+
+                <div id="caja-particles" class="particle-layer"></div>
+
+                <div id="caja-empty">
+                    <div class="caja-empty-panel cartoon-box">
+                        <i class="fa-solid fa-gift"></i>
+                        <h3>¡NO QUEDAN CAJAS!</h3>
+                        <p>No queda ninguna caja por abrir.</p>
+                        <button class="cartoon-btn" id="btn-caja-regen"><i class="fa-solid fa-arrows-rotate"></i> GENERAR CAJAS</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -309,6 +309,24 @@ function drawTokens(animPlayerName = null, animType = null) {
     });
     // La clasificación se recalcula con cada salto de ficha
     renderPlayerIndex();
+    followActiveTile();
+}
+
+/**
+ * En pantallas pequeñas el tablero no cabe entero de alto. Si hay scroll, se
+ * centra la casilla del jugador de turno para no perder de vista su ficha.
+ */
+function followActiveTile() {
+    const board = document.getElementById('oca-board');
+    const cp = GameState.players[GameState.currentPlayerIndex];
+    if (!board || !cp) return;
+    if (board.scrollHeight <= board.clientHeight + 4) return;   // cabe entero: no tocar nada
+
+    const tileEl = document.getElementById(`tile-${GameState.playerPositions[cp.name]}`);
+    if (!tileEl) return;
+
+    const top = tileEl.offsetTop - (board.clientHeight - tileEl.offsetHeight) / 2;
+    board.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
 function updateTurnUI() {

@@ -12,6 +12,8 @@
 
 * { box-sizing: border-box; font-family: 'Fredoka One', cursive, sans-serif; user-select: none; }
 body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+/* En móvil la barra del navegador se come parte del 100vh: dvh mide lo que se ve */
+@supports (height: 100dvh) { body { height: 100dvh; } }
 
 .cartoon-box {
     border: 4px solid var(--border-color); border-radius: 16px; box-shadow: 6px 6px 0px var(--border-color);
@@ -39,9 +41,143 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
 /* MENU */
 #menu-screen { overflow-y: auto; }
 .top-bar { width: 100%; display: flex; justify-content: flex-start; padding-bottom: 20px; }
-.game-menu { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
-.game-card { width: 250px; height: clamp(190px, 32vh, 350px); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; text-align: center; }
+/* Tres tarjetas arriba y dos abajo: el ancho máximo no da para una cuarta */
+.game-menu {
+    display: flex; gap: 22px; justify-content: center; flex-wrap: wrap;
+    max-width: 704px; margin: 0 auto;
+}
+.game-card { width: 220px; height: clamp(165px, 27vh, 290px); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; text-align: center; }
 .game-card i { font-size: clamp(2.8rem, 8vh, 5rem); margin-bottom: clamp(8px, 2vh, 20px); }
+.game-card:hover { transform: translate(-2px, -3px); }
+
+/* Colores planos, un tono por minijuego */
+.game-card-oca      { background-color: #4ECDC4; }
+.game-card-ruleta   { background-color: #FF6B6B; }
+.game-card-slot     { background-color: #FFC93C; }
+.game-card-caja     { background-color: #4D96FF; }
+.game-card-plinko   { background-color: #A66BFF; }
+
+/* ===== ILUSTRACIONES ANIMADAS DE LAS TARJETAS ===== */
+.card-art {
+    position: relative; width: 104px; height: 82px; flex-shrink: 0;
+    margin-bottom: clamp(8px, 2vh, 16px);
+    display: flex; align-items: center; justify-content: center;
+}
+.card-art i { font-size: 19px; margin: 0; }
+
+/* LA OCA: el dado bota */
+.art-dice .dado {
+    width: 64px; height: 64px; background-color: #FFFFFF;
+    border: 4px solid var(--border-color); border-radius: 15px;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.45);
+    display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 8px;
+    animation: artDice 2.8s ease-in-out infinite;
+}
+.art-dice .dado span { width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; align-self: center; justify-self: center; }
+.art-dice .dado span:nth-child(1) { grid-area: 1 / 1; }
+.art-dice .dado span:nth-child(2) { grid-area: 1 / 3; }
+.art-dice .dado span:nth-child(3) { grid-area: 2 / 2; }
+.art-dice .dado span:nth-child(4) { grid-area: 3 / 1; }
+.art-dice .dado span:nth-child(5) { grid-area: 3 / 3; }
+@keyframes artDice {
+    0%, 58%, 100% { transform: rotate(-7deg) translateY(0) scale(1, 1); }
+    64%  { transform: rotate(-7deg) translateY(0) scale(1.12, 0.86); }
+    74%  { transform: rotate(9deg) translateY(-20px) scale(0.94, 1.1); }
+    86%  { transform: rotate(-3deg) translateY(0) scale(1.1, 0.9); }
+    93%  { transform: rotate(-7deg) translateY(-4px) scale(1, 1); }
+}
+
+/* LA RULETA: la rueda gira a rachas */
+.art-wheel .rueda {
+    position: relative; width: 68px; height: 68px; border-radius: 50%; overflow: hidden;
+    border: 4px solid var(--border-color);
+    animation: artWheel 3.4s cubic-bezier(0.12, 0.85, 0.2, 1) infinite;
+}
+/* La sombra va aparte y quieta: como box-shadow del disco giraría con él */
+.art-wheel::before {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 76px; height: 76px; border-radius: 50%;
+    transform: translate(-50%, -50%) translate(4px, 4px);
+    background-color: rgba(0,0,0,0.45);
+}
+.art-wheel .rueda > span { position: absolute; width: 50%; height: 50%; }
+.art-wheel .rueda > span:nth-child(1) { top: 0; left: 0; background-color: #FFFFFF; }
+.art-wheel .rueda > span:nth-child(2) { top: 0; right: 0; background-color: #FFC93C; }
+.art-wheel .rueda > span:nth-child(3) { bottom: 0; right: 0; background-color: #4ECDC4; }
+.art-wheel .rueda > span:nth-child(4) { bottom: 0; left: 0; background-color: #A66BFF; }
+.art-wheel .rueda::after {
+    content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 20px; height: 20px; border-radius: 50%;
+    background-color: #FFFFFF; border: 3px solid var(--border-color);
+}
+.art-wheel .rueda-aguja {
+    position: absolute; top: 1px; left: 50%; transform: translateX(-50%); z-index: 2;
+    width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-top: 15px solid var(--border-color);
+}
+@keyframes artWheel {
+    0%, 45% { transform: rotate(0deg); }
+    100%    { transform: rotate(360deg); }
+}
+
+/* LA MAQUINITA: los tres rodillos giran a distinta velocidad */
+.art-slot { gap: 6px; }
+.art-slot .reel {
+    width: 26px; height: 42px; overflow: hidden; background-color: #FFFFFF;
+    border: 3px solid var(--border-color); border-radius: 6px; box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+}
+.art-slot .strip { display: block; animation: artReel 1.5s linear infinite; }
+.art-slot .reel:nth-child(2) .strip { animation-duration: 1.9s; }
+.art-slot .reel:nth-child(3) .strip { animation-duration: 2.3s; }
+.art-slot .strip b {
+    display: block; height: 36px; line-height: 36px; text-align: center;
+    font-size: 19px; font-weight: normal; color: #b02020;
+}
+@keyframes artReel {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-144px); }   /* 4 símbolos: la tira está duplicada */
+}
+
+/* CAJA SORPRESA: la tapa salta cada pocos segundos */
+.art-box { width: 92px; height: 82px; }
+.art-box .box-svg { width: 100%; height: 100%; }
+.art-box .box-lid { animation: artBoxLid 3.2s ease-in-out infinite; }
+.art-box .box-shine { animation: artBoxShine 3.2s ease-in-out infinite; }
+@keyframes artBoxLid {
+    0%, 52%, 100% { transform: translate(0, 0) rotate(0deg); }
+    62%  { transform: translate(3px, -24px) rotate(-16deg); }
+    76%  { transform: translate(1px, -9px) rotate(7deg); }
+    88%  { transform: translate(0, -2px) rotate(-3deg); }
+}
+@keyframes artBoxShine {
+    0%, 52%, 100% { opacity: 0; }
+    64%, 80%      { opacity: 1; }
+}
+
+/* PLINKO: la bola baja rebotando entre los obstáculos */
+.art-plinko { flex-direction: column; gap: 7px; padding-top: 22px; justify-content: flex-start; }
+.art-plinko .pk-row { display: flex; gap: 16px; }
+.art-plinko .pk-row span {
+    width: 10px; height: 10px; border-radius: 50%; background-color: #FFD700;
+    border: 2px solid var(--border-color);
+}
+.art-plinko .pk-bins { display: flex; gap: 4px; margin-top: 3px; }
+.art-plinko .pk-bins span {
+    width: 14px; height: 12px; background-color: #FFFFFF;
+    border: 2px solid var(--border-color); border-top: none; border-radius: 0 0 4px 4px;
+}
+.art-plinko .pk-ball {
+    position: absolute; top: 0; left: 50%; width: 16px; height: 16px; border-radius: 50%;
+    background-color: #d8d8e2; border: 3px solid var(--border-color);
+    animation: pkCardDrop 2.4s ease-in-out infinite;
+}
+@keyframes pkCardDrop {
+    0%   { transform: translate(-50%, 0) scale(1); }
+    25%  { transform: translate(calc(-50% - 18px), 26px) scale(1); }
+    50%  { transform: translate(calc(-50% + 16px), 50px) scale(1); }
+    75%  { transform: translate(calc(-50% - 8px), 72px) scale(0.95); }
+    100% { transform: translate(-50%, 0) scale(1); }
+}
 
 /* MEZCLA DE RETOS */
 .mix-panel { width: min(96%, 780px); margin: 26px 0 10px; padding: 16px 20px 18px; background-color: #fff; flex-shrink: 0; }
@@ -93,20 +229,13 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
 .mix-bar-seg.seg-hot { background-color: var(--hot); }
 .mix-bar-seg.seg-extremo { background-color: var(--extremo); }
 
-/* Tarjeta de la maquinita en el selector */
-.game-card-slot { background: linear-gradient(165deg, #FFE66D 0%, #FFC93C 55%, #FF9F1C 100%); }
-.slot-card-icon { position: relative; display: flex; flex-direction: column; align-items: center; margin-bottom: 18px; }
-.slot-card-icon i { font-size: 4.4rem; margin-bottom: 8px; color: #8a5a00; text-shadow: 3px 3px 0 rgba(255,255,255,0.65); }
-.slot-card-777 {
-    font-size: 1.5rem; letter-spacing: 4px; color: #b02020; background: #fff8d0;
-    border: 3px solid #000; border-radius: 8px; padding: 1px 10px 3px; box-shadow: 3px 3px 0 #000;
-}
-
 /* OCA Y TABLERO */
 #oca-screen { position: relative; padding: 10px; }
 .oca-main-content { display: flex; width: 100%; flex: 1; gap: 20px; align-items: stretch; }
 .oca-board-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.board-container { flex: 1; width: 100%; display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; background-color: #e0e0e0; padding: 15px; overflow-y: auto; border-radius: 16px; border: 4px solid black; }
+/* position: relative para que las casillas midan su offsetTop contra el tablero
+   (lo usa followActiveTile para seguir a la ficha cuando el tablero no cabe) */
+.board-container { position: relative; flex: 1; width: 100%; display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; background-color: #e0e0e0; padding: 15px; overflow-y: auto; border-radius: 16px; border: 4px solid black; }
 .tile { aspect-ratio: 1; background-color: white; border: 3px solid black; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 2rem; position: relative; box-shadow: 3px 3px 0 black; overflow: hidden; }
 .tile-num { position: absolute; top: 2px; left: 4px; font-size: 0.8rem; font-weight: bold; background: rgba(255,255,255,0.7); padding: 0 4px; border-radius: 4px; color: black; }
 
@@ -176,26 +305,34 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
 }
 #show-dice-btn { font-size: 1.44rem; padding: 12px 24px; animation: pulseBtn 1.5s infinite ease-in-out; }
 
-/* PLAYER INDEX (compartido por los 3 minijuegos) */
-.mode-layout { display: flex; width: 100%; flex: 1; gap: 20px; align-items: stretch; min-height: 0; min-width: 0; }
+/* PLAYER INDEX (compartido por los 5 minijuegos) */
+.mode-layout { display: flex; width: 100%; flex: 1; gap: clamp(8px, 1.5vw, 20px); align-items: stretch; min-height: 0; min-width: 0; }
+
+/*
+ * El marcador se encoge con la pantalla en vez de reservar 195px fijos: el ancho
+ * y la letra van con la ventana, y todo lo de dentro va en `em` para que baste
+ * con tocar el font-size del panel para escalarlo entero.
+ */
 .side-index {
-    width: 195px; flex-shrink: 0; align-self: flex-start;
-    background-color: rgba(255,255,255,0.95); padding: 14px; font-size: 1rem;
+    width: clamp(104px, calc(60px + 8vw), 180px); flex-shrink: 0; align-self: flex-start;
+    background-color: rgba(255,255,255,0.95);
+    padding: clamp(7px, 1vw, 14px);
+    font-size: clamp(0.72rem, calc(0.55rem + 0.6vw), 0.95rem);
 }
-.side-index h3 { margin: 0 0 10px 0; font-size: 1.1rem; text-align: center; border-bottom: 2px solid black; padding-bottom: 5px; }
-.side-index h3 i { margin-right: 5px; }
-.index-note { margin: 10px 0 0; font-size: 0.62rem; line-height: 1.3; text-align: center; opacity: 0.7; border-top: 2px dashed rgba(0,0,0,0.25); padding-top: 7px; }
+.side-index h3 { margin: 0 0 0.7em 0; font-size: 1.1em; text-align: center; border-bottom: 2px solid black; padding-bottom: 0.35em; }
+.side-index h3 i { margin-right: 0.35em; }
+.index-note { margin: 0.85em 0 0; font-size: 0.62em; line-height: 1.3; text-align: center; opacity: 0.7; border-top: 2px dashed rgba(0,0,0,0.25); padding-top: 0.6em; }
 
 .index-row {
-    display: flex; align-items: center; gap: 7px; margin-bottom: 5px;
-    padding: 3px 5px; border-radius: 8px; border: 2px solid transparent;
+    display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.35em;
+    padding: 0.2em 0.35em; border-radius: 8px; border: 2px solid transparent;
 }
-.index-color { width: 15px; height: 15px; border-radius: 50%; border: 2px solid black; flex-shrink: 0; }
-.index-rank { font-size: 0.78rem; width: 24px; flex-shrink: 0; text-align: right; opacity: 0.85; }
-.index-name { flex: 1; min-width: 0; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.index-color { width: 0.95em; height: 0.95em; border-radius: 50%; border: 2px solid black; flex-shrink: 0; }
+.index-rank { font-size: 0.78em; width: 2.2em; flex-shrink: 0; text-align: right; opacity: 0.85; }
+.index-name { flex: 1; min-width: 0; font-size: 0.85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .index-badge {
-    flex-shrink: 0; min-width: 24px; text-align: center; font-size: 0.78rem;
-    background: #ececf2; border: 2px solid #000; border-radius: 7px; padding: 0 5px;
+    flex-shrink: 0; min-width: 2.1em; text-align: center; font-size: 0.78em;
+    background: #ececf2; border: 2px solid #000; border-radius: 7px; padding: 0 0.4em;
 }
 
 /* Fila del jugador al que le toca */
@@ -332,14 +469,15 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
 
 /* MODAL Y CARTAS */
 #card-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; }
-.challenge-card { width: 320px; height: 480px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; position: relative; z-index: 2; }
+/* Nunca más grande que la pantalla: en móvil (y en horizontal) se ajusta sola */
+.challenge-card { width: min(320px, 90vw); height: min(480px, 88vh); padding: clamp(12px, 3vw, 20px); display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; position: relative; z-index: 2; }
 .challenge-card.beber { background-color: var(--beber); color: black; }
 .challenge-card.sencillos { background-color: var(--sencillos); color: black; }
 .challenge-card.hot { background-color: var(--hot); color: black; }
 .challenge-card.extremo { background-color: var(--extremo); color: var(--extremo-text); }
-.challenge-card h2 { font-size: 1.8rem; margin: 10px 0; }
-.challenge-card i.main-icon { font-size: 6rem; margin: auto 0; }
-.challenge-card p { font-size: 1.2rem; }
+.challenge-card h2 { font-size: clamp(1.25rem, 5.5vw, 1.8rem); margin: 10px 0; }
+.challenge-card i.main-icon { font-size: clamp(3rem, 17vh, 6rem); margin: auto 0; }
+.challenge-card p { font-size: clamp(0.9rem, 3.6vw, 1.2rem); }
 .close-card-btn { margin-top: auto; }
 
 /* Carta de clasificación final: cabe una lista de hasta 8 jugadores */
@@ -380,7 +518,7 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
     pointer-events: none;
 }
 .challenge-card.golden h2 {
-    font-size: 2rem;
+    font-size: clamp(1.35rem, 6vw, 2rem);
     color: #fff8d0;
     -webkit-text-stroke: 2px var(--gold-dark);
     text-shadow: 3px 3px 0 var(--gold-dark);
@@ -413,7 +551,7 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
     pointer-events: none;
 }
 .challenge-card.silver h2 {
-    font-size: 2rem;
+    font-size: clamp(1.35rem, 6vw, 2rem);
     color: #ffffff;
     -webkit-text-stroke: 2px #555;
     text-shadow: 3px 3px 0 #555;
@@ -463,6 +601,8 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
 .wheel {
     width: 100%; height: 100%; border-radius: 50%; cursor: grab;
     transition: transform 0s linear; overflow: hidden; position: relative;
+    /* En móvil el arrastre es para girar la ruleta, no para gestos del navegador */
+    touch-action: none; -webkit-tap-highlight-color: transparent;
 }
 .wheel:active { cursor: grabbing; }
 .wheel-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -588,10 +728,10 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
     font-size: 1rem; box-shadow: 2px 2px 0 #000;
 }
 .hint-text { margin-left: 6px; letter-spacing: 1px; }
+/* Mismo botón que el de la oca: amarillo plano y sombra dura */
 #btn-spin-slot {
-    font-size: clamp(1.2rem, 3.6vw, 1.7rem); padding: 14px 42px; letter-spacing: 2px;
-    background: linear-gradient(180deg, #7dffe8, #4ECDC4 55%, #1fa39a);
-    animation: pulseBtn 1.6s infinite ease-in-out;
+    font-size: 1.44rem; padding: 12px 24px;
+    animation: pulseBtn 1.5s infinite ease-in-out;
 }
 #btn-spin-slot:disabled { filter: grayscale(0.7); animation: none; cursor: not-allowed; }
 
@@ -622,4 +762,395 @@ body { margin: 0; padding: 0; background-color: var(--bg-color); overflow: hidde
     background: linear-gradient(135deg, #fffbe0, #ffe066 20%, #ffd700 45%, #b8860b 55%, #ffd700 75%, #fffbe0);
     background-size: 300% 300%; color: var(--gold-ink);
     animation: bannerPop 0.65s cubic-bezier(0.2, 1.4, 0.4, 1) forwards, goldShift 2.5s linear infinite;
+}
+
+/* ================= PLINKO ================= */
+#plinko-screen { max-width: 1320px; padding: 10px 20px 12px; }
+.plinko-stage { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; }
+
+/* El título comparte fila con el botón de casa: todo el alto restante es circuito */
+#plinko-screen .top-bar { align-items: center; gap: 14px; padding-bottom: 8px; }
+#plinko-screen .top-bar::after { content: ''; width: 55px; flex-shrink: 0; }
+.plinko-headline { flex: 1; min-width: 0; text-align: center; }
+.plinko-headline h2 { margin: 0; font-size: clamp(0.95rem, 2.4vw, 1.3rem); line-height: 1.15; }
+.plinko-hint { margin: 1px 0 0; font-size: 0.76rem; opacity: 0.72; }
+
+.plinko-viewport {
+    position: relative; width: 100%; flex: 1; min-height: 300px; overflow: hidden;
+    border: 6px solid var(--border-color); border-radius: 20px;
+    background: radial-gradient(circle at 50% 0%, #4b2a7a 0%, #2b1750 45%, #170a2e 100%);
+    box-shadow: 10px 10px 0 var(--border-color), inset 0 0 60px rgba(0,0,0,0.55);
+}
+.plinko-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+#plinko-canvas { position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; }
+.plinko-balls { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.plinko-baskets { position: absolute; left: 0; bottom: 0; width: 100%; display: flex; z-index: 1; }
+
+/* Bolas grises: cada jugador elige la suya antes de la cuenta atrás */
+.plinko-chip {
+    position: absolute; border-radius: 50%; border: 3px solid var(--border-color); cursor: pointer;
+    background: radial-gradient(circle at 34% 28%, #ffffff, #c8c8d2 45%, #8d8d9c 100%);
+    box-shadow: 2px 3px 0 rgba(0,0,0,0.55); pointer-events: auto;
+    display: flex; align-items: center; justify-content: center;
+    animation: chipFloat 1.9s ease-in-out infinite;
+}
+/* Zona de toque más generosa que la bola: en móvil la bola queda pequeña */
+.plinko-chip::before { content: ''; position: absolute; inset: -13px; border-radius: 50%; }
+.plinko-chip.taken::before { content: none; }
+.plinko-chip .chip-mark { font-size: 15px; line-height: 1; color: #3a3a48; }
+.plinko-chip .chip-name {
+    position: absolute; top: 116%; left: 50%; transform: translateX(-50%);
+    white-space: nowrap; font-size: 11px; line-height: 1.1; padding: 1px 6px 2px;
+    border: 2px solid var(--border-color); border-radius: 7px; background: #fff; color: #000;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.45);
+}
+.plinko-chip.taken { cursor: default; animation: none; }
+.plinko-chip.taken .chip-mark { color: #fff; -webkit-text-stroke: 1px var(--border-color); }
+.plinko-chip.auto { box-shadow: 2px 3px 0 rgba(0,0,0,0.55), 0 0 18px rgba(255,255,255,0.85); }
+@keyframes chipFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-7px) scale(1.06); }
+}
+@keyframes chipTake {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.55); }
+    100% { transform: scale(1); }
+}
+.plinko-chip.pop { animation: chipTake 0.42s cubic-bezier(0.2, 1.5, 0.4, 1); }
+
+/* Cuenta atrás */
+#plinko-countdown {
+    position: absolute; inset: 0; z-index: 20; display: none;
+    align-items: center; justify-content: center; background: rgba(12, 4, 26, 0.5);
+}
+#plinko-countdown.show { display: flex; }
+#plinko-countdown span {
+    font-size: clamp(4rem, 22vh, 10rem); line-height: 1; color: #FFE66D;
+    -webkit-text-stroke: 5px var(--border-color);
+    text-shadow: 0 0 45px #ffb703, 8px 8px 0 rgba(0,0,0,0.5);
+}
+#plinko-countdown.go span { color: #7dffe8; text-shadow: 0 0 45px #1fa39a, 8px 8px 0 rgba(0,0,0,0.5); font-size: clamp(2.6rem, 13vh, 6rem); }
+@keyframes countPop {
+    0%   { transform: scale(0.2) rotate(-16deg); opacity: 0; }
+    45%  { transform: scale(1.28) rotate(4deg); opacity: 1; }
+    72%  { transform: scale(0.94) rotate(-1deg); opacity: 1; }
+    100% { transform: scale(1.06) rotate(0deg); opacity: 1; }
+}
+#plinko-countdown span.pop { animation: countPop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
+
+/* Cestas */
+.plinko-basket {
+    position: relative; flex-shrink: 0; display: flex; flex-direction: column;
+    border: 3px solid var(--border-color); border-radius: 0 0 12px 12px; overflow: hidden;
+    box-shadow: inset 0 7px 14px rgba(0,0,0,0.28);
+}
+.basket-mouth {
+    height: var(--mouth-h, 58px); flex-shrink: 0;
+    background: rgba(0,0,0,0.2); border-bottom: 3px dashed rgba(0,0,0,0.35);
+}
+.basket-body {
+    flex: 1; min-height: 0; overflow: hidden; padding: 6px 5px 5px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center;
+}
+.basket-body > i { font-size: 22px; line-height: 1; margin: 1px 0; }
+.basket-title {
+    font-size: 11.5px; line-height: 1.1; letter-spacing: 0.4px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.basket-desc {
+    font-size: 9.8px; line-height: 1.22; opacity: 0.92;
+    display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden;
+}
+.basket-hits { margin-top: auto; padding-top: 3px; display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
+.basket-hit {
+    display: flex; align-items: center; gap: 3px; max-width: 100%;
+    font-size: 8.5px; line-height: 1.2; padding: 1px 4px 2px; color: #000;
+    border: 2px solid var(--border-color); border-radius: 7px; background: #fff;
+    animation: chipTake 0.4s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.basket-hit .hit-dot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--border-color); flex-shrink: 0; }
+
+@keyframes basketHit {
+    0%   { transform: translateY(0); }
+    30%  { transform: translateY(8px) scaleY(0.96); }
+    65%  { transform: translateY(-2px); }
+    100% { transform: translateY(0); }
+}
+.plinko-basket.hit {
+    animation: basketHit 0.5s ease-out;
+    box-shadow: inset 0 0 0 4px #fff, 0 0 34px rgba(255,255,255,0.95);
+}
+
+/* Cesta del RETO DE ORO: mismo dorado que el resto de minijuegos */
+.plinko-basket.golden {
+    background: linear-gradient(135deg, #fffbe0 0%, #ffe066 20%, #ffd700 40%, #b8860b 50%, #ffd700 60%, #ffe066 80%, #fffbe0 100%);
+    background-size: 300% 300%; animation: goldShift 3s linear infinite;
+    border-color: var(--gold-dark); color: var(--gold-ink);
+    box-shadow: inset 0 7px 14px rgba(0,0,0,0.2), 0 0 26px rgba(255, 200, 0, 0.85);
+}
+.plinko-basket.golden .basket-mouth { background: rgba(107, 74, 0, 0.22); border-bottom-color: rgba(107, 74, 0, 0.5); }
+.plinko-basket.golden .basket-body > i {
+    color: #fff8d0; -webkit-text-stroke: 2px var(--gold-dark); text-shadow: 0 0 14px #ffae00;
+}
+.plinko-basket.golden .basket-title {
+    color: #fff8d0; -webkit-text-stroke: 1.4px var(--gold-dark); text-shadow: 2px 2px 0 var(--gold-dark);
+}
+.plinko-basket.golden .basket-desc { font-weight: bold; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+.plinko-basket.golden.hit {
+    animation: basketHit 0.5s ease-out, goldShift 3s linear infinite;
+    box-shadow: inset 0 0 0 4px #fff8d0, 0 0 55px 10px rgba(255, 215, 0, 1);
+}
+
+/* Controles */
+.plinko-controls { min-height: 62px; margin-top: 6px; display: flex; align-items: center; justify-content: center; }
+/* Mismo botón que el de la oca: amarillo plano y sombra dura */
+#btn-plinko-relaunch {
+    display: none; font-size: 1.44rem; padding: 12px 24px;
+    animation: pulseBtn 1.5s infinite ease-in-out;
+}
+#btn-plinko-relaunch.show { display: block; }
+
+/* ================= CAJA SORPRESA ================= */
+#caja-screen { max-width: 1320px; padding: 10px 20px 14px; }
+#caja-screen .top-bar { align-items: center; gap: 14px; padding-bottom: 8px; }
+#caja-screen .top-bar::after { content: ''; width: 55px; flex-shrink: 0; }
+.caja-headline { flex: 1; min-width: 0; text-align: center; }
+.caja-headline h2 { margin: 0; font-size: clamp(0.95rem, 2.4vw, 1.3rem); line-height: 1.15; }
+.caja-hint { margin: 1px 0 0; font-size: 0.76rem; opacity: 0.72; }
+
+.caja-stage { position: relative; flex: 1; display: flex; min-width: 0; min-height: 0; }
+.caja-field {
+    position: relative; flex: 1; min-height: 300px; overflow: hidden;
+    background-color: #FFFFFF;
+    border: 6px solid var(--border-color); border-radius: 20px;
+    box-shadow: 10px 10px 0 var(--border-color);
+}
+.caja-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+#caja-particles { z-index: 70; }
+
+/* --- LA CAJA (SVG vectorial, caras planas) --- */
+.box {
+    position: absolute; cursor: pointer; z-index: 2;
+    transition: transform 0.14s ease, filter 0.14s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.box:hover { transform: translateY(-6px) scale(1.06); filter: brightness(1.1); z-index: 5; }
+.box:active { transform: translateY(-2px) scale(1.02); }
+.box-tilt { position: absolute; inset: 0; transform: rotate(var(--tilt, 0deg)); }
+.box-hop { position: absolute; inset: 0; }
+.box-svg { width: 100%; height: 100%; overflow: visible; display: block; }
+
+/* Paleta por variante: un tono por cara, sin degradados. Ninguno coincide con
+   los colores de las dificultades, para que la caja no delate el reto. */
+.box-c1 { --front: #5B5BD6; --top: #8484E8; --side: #3B3BA8; }
+.box-c2 { --front: #E45FA8; --top: #F58BC4; --side: #B23C7E; }
+.box-c3 { --front: #2FB8A8; --top: #5FD8C8; --side: #1E8578; }
+.box-c4 { --front: #9B5DE5; --top: #B98BF0; --side: #7038B8; }
+.box-c5 { --front: #5A7D9A; --top: #86A6BE; --side: #3C5B75; }
+
+.box-svg polygon { stroke: var(--border-color); stroke-width: 3.2; stroke-linejoin: round; }
+.box-svg .face-front, .box-svg .lid-front { fill: var(--front); }
+.box-svg .lid-top { fill: var(--top); }
+.box-svg .face-side,  .box-svg .lid-side  { fill: var(--side); }
+.box-svg .ribbon-front, .box-svg .ribbon-lid-front { fill: #FFF6E0; }
+.box-svg .ribbon-lid-top { fill: #FFFDF2; }
+
+/* La boca de la caja: gris oscuro, para que al saltar la tapa se lea como el
+   hueco del interior y no como otra cara pintada */
+.box-svg .face-top { fill: #45414F; }
+
+/* La tapa: sale despedida al abrir */
+.box-svg .box-lid {
+    transform-origin: 50px 34px;
+    transition: transform 0.36s cubic-bezier(0.2, 1.55, 0.4, 1);
+}
+.box-svg .box-shine { fill: #FFF8D0; stroke: none; opacity: 0; transition: opacity 0.22s ease; }
+.box.open .box-lid { transform: translate(4px, -27px) rotate(-16deg); }
+.box.open .box-shine { opacity: 1; }
+.box.glow-gold { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.95)); }
+.box.glow-bomb { filter: drop-shadow(0 0 15px rgba(255, 60, 60, 0.95)); }
+.box.glow-bomb .box-shine { fill: #ffd0d0; }
+
+/* Se comprime, brinca y aterriza */
+@keyframes boxHop {
+    0%   { transform: translateY(0) scale(1, 1); }
+    20%  { transform: translateY(0) scale(1.12, 0.85); }
+    46%  { transform: translateY(-15px) scale(0.93, 1.12); }
+    70%  { transform: translateY(0) scale(1.08, 0.93); }
+    86%  { transform: translateY(-4px) scale(0.99, 1.02); }
+    100% { transform: translateY(0) scale(1, 1); }
+}
+.box-hop.hop { animation: boxHop 0.56s cubic-bezier(0.3, 1.2, 0.4, 1); }
+
+/* Y explota al cerrar la carta */
+@keyframes boxBoom {
+    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+    22%  { transform: scale(1.32) rotate(5deg); opacity: 1; filter: brightness(2.6); }
+    100% { transform: scale(0.16) rotate(-18deg); opacity: 0; }
+}
+.box.boom { animation: boxBoom 0.46s ease-out forwards; pointer-events: none; z-index: 6; }
+
+/* Onda expansiva de la caja bomba */
+@keyframes boxShock {
+    0%   { transform: translate(-50%, -50%) scale(0.15); opacity: 0.95; }
+    100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+.box-shock {
+    position: absolute; width: 240px; height: 240px; border-radius: 50%;
+    border: 9px solid #ff5a3c; transform: translate(-50%, -50%) scale(0.15);
+    pointer-events: none; animation: boxShock 0.65s ease-out forwards;
+}
+
+/* Cartel de "no quedan cajas" */
+#caja-empty {
+    position: absolute; inset: 0; z-index: 80; display: none;
+    align-items: center; justify-content: center; background: rgba(12, 8, 26, 0.62);
+}
+#caja-empty.show { display: flex; }
+.caja-empty-panel {
+    padding: 26px 34px; text-align: center; max-width: 400px; background-color: #FFFDF5;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    animation: bannerPop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+.caja-empty-panel i { font-size: 3.2rem; color: #4D96FF; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); }
+.caja-empty-panel h3 { margin: 4px 0 0; font-size: 1.5rem; }
+.caja-empty-panel p { margin: 0 0 6px; font-size: 0.95rem; opacity: 0.8; }
+#btn-caja-regen { font-size: 1.1rem; letter-spacing: 1px; background-color: #4ECDC4; animation: pulseBtn 1.6s infinite ease-in-out; }
+
+/* ===== CARTA DE CAJA BOMBA ===== */
+@keyframes bombGlow {
+    0%, 100% { box-shadow: 6px 6px 0 #3d0000, 0 0 30px rgba(255, 60, 60, 0.55); }
+    50%      { box-shadow: 6px 6px 0 #3d0000, 0 0 75px rgba(255, 60, 60, 1); }
+}
+.challenge-card.bomba {
+    background-color: #b81c1c;
+    color: #fff1f1;
+    border-color: #3d0000;
+    animation: bombGlow 1.5s ease-in-out infinite;
+    overflow: hidden;
+}
+.challenge-card.bomba h2 {
+    font-size: clamp(1.35rem, 6vw, 2rem); color: #fff;
+    -webkit-text-stroke: 2px #3d0000; text-shadow: 3px 3px 0 #3d0000; letter-spacing: 1px;
+}
+.challenge-card.bomba i.main-icon {
+    color: #fff; -webkit-text-stroke: 3px #3d0000;
+    text-shadow: 0 0 26px #ff5a5a, 4px 4px 0 rgba(61, 0, 0, 0.55);
+    animation: machineShake 0.4s ease-in-out infinite;
+}
+.challenge-card.bomba p { font-weight: bold; text-shadow: 0 1px 0 rgba(0,0,0,0.45); }
+.challenge-card.bomba .close-card-btn {
+    background-color: #ffd9d9; color: #2b0000;
+    border-color: #3d0000; box-shadow: 4px 4px 0 #3d0000;
+}
+
+/* =====================================================================
+   RESPONSIVE
+   Tres situaciones distintas, y cada una pide una cosa:
+     · pantalla estrecha  -> menos margen, letra más pequeña
+     · móvil en vertical  -> el marcador pasa de columna a tira horizontal
+     · pantalla baja      -> recortar todo lo que roba alto al juego
+   La OCA es aparte: su tablero son 10 columnas y en vertical no hay manera,
+   así que en móvil de pie se pide girar la pantalla.
+   ===================================================================== */
+
+/* ---------- Pantallas estrechas (móvil y tablet) ---------- */
+@media (max-width: 700px) {
+    /* Los tres minijuegos con padding propio llevan id, así que hay que nombrarlos */
+    .screen,
+    #caja-screen, #plinko-screen, #maquinita-screen { padding: 10px; }
+    .top-bar { padding-bottom: 10px; }
+    .cartoon-btn { font-size: 1rem; padding: 8px 14px; }
+    .cartoon-box { box-shadow: 4px 4px 0 var(--border-color); }
+
+    #turn-indicator, #ruleta-turn-indicator { font-size: 1.15rem; }
+    #show-dice-btn, #btn-spin-slot, #btn-plinko-relaunch { font-size: 1.1rem; padding: 9px 16px; }
+
+    .wheel-pointer { font-size: 3.4rem; top: -11px; }
+    .ruleta-hint { font-size: 0.9rem; margin-top: 6px; }
+
+    /* Menos aire en el tablero de la oca: son 8 filas y cada píxel cuenta */
+    .board-container { padding: 8px; gap: 5px; }
+    .player-token { width: 18px; height: 18px; }
+
+    .caja-field, .plinko-viewport { box-shadow: 5px 5px 0 var(--border-color); }
+    .slot-machine { box-shadow: 5px 5px 0 #000, inset 0 0 50px rgba(0,0,0,0.28); }
+    .wheel-wrapper { box-shadow: 5px 5px 0 rgba(0,0,0,1), inset 0 0 0 6px #FFD700; }
+
+    /* El menú: tarjetas más chicas; abajo de ~500px caben dos por fila */
+    .game-menu { max-width: 508px; gap: 14px; }
+    .game-card { width: 160px; font-size: 1.2rem; }
+    .card-art { transform: scale(0.78); }
+}
+
+/* ---------- Móvil en vertical: el marcador se pone en horizontal ----------
+   Solo para los minijuegos de .mode-layout: la oca usa .oca-main-content y en
+   vertical no llega a verse (se pide girar la pantalla). */
+@media (orientation: portrait) and (max-width: 900px) {
+    .mode-layout { flex-direction: column; }
+
+    /* Ya no es una columna lateral, sino una tira de fichas sobre el juego */
+    .mode-layout > .side-index {
+        width: 100%; align-self: stretch;
+        padding: 6px 8px; font-size: 0.8rem;
+    }
+    /* El título y la nota se comen una línea entera cada uno */
+    .mode-layout > .side-index > h3,
+    .mode-layout > .side-index > .index-note { display: none; }
+    /* La lista de jugadores (el único div hijo del panel) pasa a fila */
+    .mode-layout > .side-index > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+    .mode-layout .index-row { margin-bottom: 0; padding: 0.15em 0.45em; }
+    .mode-layout .index-name { flex: 0 1 auto; max-width: 7em; }
+}
+
+/* ---------- Pantallas bajas (móvil en horizontal) ---------- */
+@media (max-height: 560px) {
+    .screen,
+    #caja-screen, #plinko-screen, #maquinita-screen { padding: 6px 10px; }
+    .top-bar { padding-bottom: 6px; }
+    .game-ui { padding: 4px 0; }
+    .index-note { display: none; }
+    .cartoon-btn { font-size: 1rem; padding: 8px 14px; }
+
+    /* El móvil en horizontal es ancho pero bajo: el menú y el tablero se aprietan */
+    .game-card { height: clamp(118px, 38vh, 200px); font-size: 1.15rem; }
+    .card-art { transform: scale(0.72); }
+    .board-container { padding: 8px; gap: 5px; }
+    .player-token { width: 18px; height: 18px; }
+
+    #turn-indicator, #ruleta-turn-indicator { font-size: 1rem; margin: 0; }
+    #show-dice-btn, #btn-spin-slot, #btn-plinko-relaunch { font-size: 1rem; padding: 7px 14px; }
+    .plinko-controls { min-height: 46px; margin-top: 2px; }
+
+    .wheel-wrapper { margin-top: 4px; }
+    .wheel-pointer { font-size: 2.8rem; top: -9px; }
+    .ruleta-hint { font-size: 0.78rem; margin-top: 4px; }
+
+    /* La maquinita es lo más alto que hay: se recorta el aire de cada pieza */
+    .slot-marquee { padding: 10px 12px 9px; }
+    .marquee-sub, .slot-hint { display: none; }
+    .slot-window { padding: 12px 12px 10px; }
+    .slot-controls { padding: 10px 12px 0; gap: 8px; }
+}
+
+/* ---------- LA OCA: en móvil de pie, a girar ---------- */
+#oca-rotate { display: none; }
+@media (orientation: portrait) and (max-width: 640px) {
+    #oca-screen.active #oca-rotate {
+        display: flex; position: fixed; inset: 0; z-index: 90;
+        align-items: center; justify-content: center; padding: 24px;
+        background-color: var(--bg-color);
+    }
+}
+.rotate-panel {
+    max-width: 320px; padding: 28px 26px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.rotate-panel > i { font-size: 3.4rem; color: #4ECDC4; animation: rotateHint 2.4s ease-in-out infinite; }
+.rotate-panel h3 { margin: 6px 0 0; font-size: 1.4rem; letter-spacing: 1px; }
+.rotate-panel p { margin: 0 0 6px; font-size: 0.95rem; opacity: 0.8; line-height: 1.35; }
+@keyframes rotateHint {
+    0%, 30%   { transform: rotate(0deg); }
+    55%, 85%  { transform: rotate(90deg); }
+    100%      { transform: rotate(0deg); }
 }
